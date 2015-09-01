@@ -1,6 +1,0 @@
-figure out how to load inside initialize.py
-test that can do basic initialize and ik
-write humanhand.py
-
-write some basic tsrs
-write some basic actions (grasp and rogue)
