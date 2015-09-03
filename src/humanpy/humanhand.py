@@ -66,8 +66,8 @@ class HumanHand(EndEffector):
             desired_preshape = current_preshape.copy()
             if f1 is not None:
                 angles = compute_finger_ratios(f1)
-                desired_preshape[0:2] = angles[0:2]
-                desired_preshape[4] = angles[2]
+                desired_preshape[0] = angles[0]
+                desired_preshape[2:4] = angles[1:]
             if f2 is not None:
                 angles = compute_finger_ratios(f2)
                 desired_preshape[5:8] = angles[0:]
@@ -76,8 +76,10 @@ class HumanHand(EndEffector):
                 desired_preshape[8:11] = angles[0:]
             if f4 is not None:
                 angles = compute_finger_ratios(f4)
-                desired_preshape[11] = angles[0]
-                desired_preshape[2:4] = angles[1:]
+                desired_preshape[11:14] = angles[0:]
+	    if f5 is not None:
+                angles = compute_finger_ratios(f5)
+                desired_preshape[14:17] = angles[0:]
 
         self.controller.SetDesired(desired_preshape)
         util.WaitForControllers([ self.controller ], timeout=timeout)
