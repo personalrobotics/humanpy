@@ -6,8 +6,9 @@ from catkin.find_in_workspaces import find_in_workspaces
 from openravepy import Environment, IkParameterizationType, RaveCreateController, RaveCreateModule
 from openravepy.databases.inversekinematics import InverseKinematicsModel
 
-#import humanpy.action # register actions
-#import humany.tsr # register TSR libraries
+from humanhand import HumanHand
+import humanpy.action # register actions
+import humanpy.tsr # register TSR libraries
 import prpy
 from prpy.base.endeffector import EndEffector
 from prpy.base.manipulator import Manipulator
@@ -28,6 +29,9 @@ def initialize(attach_viewer=False):
 
     env = Environment()
 
+    #Not available in real life
+    sim = True
+
     #Setup Manipulators
     with env:
         robot = env.ReadKinBodyXMLFile('robots/man1.zae')
@@ -44,7 +48,9 @@ def initialize(attach_viewer=False):
         bind_subclass(robot, Robot, robot_name='human')
         bind_subclass(robot.left_arm, Manipulator)
         bind_subclass(robot.right_arm, Manipulator)
-        #subclasses for hand?
+        bind_subclass(robot.left_arm.hand, HumanHand, manipulator=robot.left_arm, sim=True)
+        bind_subclass(robot.right_arm.hand, HumanHand, manipulator=robot.right_arm, sim=True)
+
 
     #Setup Controller
     with env:
@@ -52,9 +58,15 @@ def initialize(attach_viewer=False):
         controller_dof_indices.extend(robot.left_arm.GetArmIndices())
         controller_dof_indices.extend(robot.right_arm.GetArmIndices())
 
-        controller = RaveCreateController(env, 'idealcontroller')
-        robot.multicontroller.AttachController(
-            controller, controller_dof_indices, 0)
+        robot.right_arm.controller = robot.AttachController(
+                name=robot.right_arm.GetName(), args='',
+                dof_indices=robot.right_arm.GetArmIndices(), affine_dofs=0, 
+                simulated=sim
+        )
+        robot.left_arm.controller = robot.AttachController(
+                name=robot.left_arm.GetName(), args='',
+                dof_indices=robot.left_arm.GetArmIndices(), affine_dofs=0, 
+                simulated=sim)
 
     #Setup IK
     with env:
@@ -84,7 +96,7 @@ def initialize(attach_viewer=False):
     robot.retimer = HauserParabolicSmoother() # hack
     robot.smoother = HauserParabolicSmoother()
 
-    #robot.actions = prpy.action.ActionLibrary()
+    robot.actions = prpy.action.ActionLibrary()
 
     #Setup viewer. Default to load rviz
     if attach_viewer == True:
