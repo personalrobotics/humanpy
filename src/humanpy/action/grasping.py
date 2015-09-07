@@ -1,6 +1,6 @@
 import prpy
 import logging
-from openravepy import KinBody
+import openravepy
 from prpy.action import ActionMethod
 
 logger = logging.getLogger('humanpy')
@@ -73,8 +73,8 @@ def HumanGrasp(robot, obj, push_distance=None, manip=None,
 
     # Plan to the grasp
     with prpy.viz.RenderTSRList(tsrlist, robot.GetEnv(), render=render):
-        manip.PlanToTSR(tsrlist)
-
+        manip.PlanToTSR(tsrlist, execute=True)
+    
     if push_distance is not None:
         ee_in_world = manip.GetEndEffectorTransform()
         push_direction = ee_in_world[:3,2]
@@ -117,6 +117,7 @@ def HumanGrasp(robot, obj, push_distance=None, manip=None,
                 else:
                     logger.warn('Could not find a plan for straight line push. Ignoring.')
         robot.Release(obj)
+    
 
     # Now close the hand to grasp
     manip.hand.CloseHand()

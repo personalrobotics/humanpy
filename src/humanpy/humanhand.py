@@ -34,7 +34,7 @@ class HumanHand(EndEffector):
         else:
             raise NotImplementedError('Non-simulation mode not implemented')
 
-    def CloneBinding(self, parent):
+    def CloneBindings(self, parent):
         super(HumanHand, self).CloneBindings(parent)
         self.simulated = True
 

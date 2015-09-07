@@ -18,3 +18,9 @@ with env:
     glass.Enable(True)
 
 robot.right_arm.SetActive()
+robotLocation = numpy.array([[ 0. ,  0. ,  1. ,   0.4],
+                             [ 1. ,  0. ,  0. ,  -0.1],
+                             [ 0. ,  1. ,  0. ,   0.3],
+                             [ 0. ,  0. ,  0. ,   1. ]])
+
+robot.SetTransform(robotLocation)

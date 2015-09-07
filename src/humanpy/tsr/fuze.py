@@ -40,15 +40,15 @@ def _fuze_grasp(robot, fuze, push_distance = 0.0, manip = None):
             manip_idx = manip.GetRobot().GetActiveManipulatorIndex()
 
     T0_w = fuze.GetTransform()
-    ee_to_palm_distance = 0.08 
+    ee_to_palm_distance = 0.01 
     default_offset_distance = 0.05 # This is the radius of the fuze
                                      # plus a little bit
                                                    
     total_offset = ee_to_palm_distance + default_offset_distance
-    Tw_e = numpy.array([[ 0., 0., 1., total_offset],
-                        [ 1., 0., 0., 0.05 + push_distance],
-                        [ 0., 1., 0., 0.08],
-                        [ 0., 0., 0., 1.]])
+    Tw_e = numpy.array([[ 0.,  1., 0., total_offset],
+                        [-1.,  0., 0., 0.05 + push_distance],
+                        [ 0.,  0., 1., 0.08],
+                        [ 0.,  0., 0., 1.]])
 
     Bw = numpy.zeros((6,2))
     Bw[2,:] = [0.0, 0.02]  # Allow a little vertical movement
