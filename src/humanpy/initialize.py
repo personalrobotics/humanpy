@@ -116,5 +116,6 @@ def initialize(attach_viewer=False):
 
     #Remove ROS Logging since loading Rviz might have added it
     prpy.logger.remove_ros_logger()
+    robot.actions = prpy.action.ActionLibrary() 
 
     return env, robot
