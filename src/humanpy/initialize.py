@@ -19,23 +19,33 @@ from prpy.planning.cbirrt import CBiRRTPlanner
 from prpy.planning.vectorfield import VectorFieldPlanner
 from prpy.planning.snap import SnapPlanner 
 from prpy.planning.retimer import HauserParabolicSmoother
+import numpy
 
 logger = logging.getLogger('humanpy')
 
-def initialize(attach_viewer=False):
+def initialize(attach_viewer=False, sim=True, env=None):
     """Initialize the Human Robot"""
     
     prpy.logger.initialize_logging()
 
-    env = Environment()
+    if not env:
+        #print "Generating env"
+        env = Environment()
 
     #Not available in real life
-    sim = True
+        
+    if sim==False:
+        print "Humanpy only works in simulated env: sim forced to True"
+        sim=True
+    #sim = True
 
     #Setup Manipulators
     with env:
+        #TO ASK: which are the differences between the following lines?
+        #robot = env.ReadRobotXMLFile('robots/man1.zae')
+        #env.Add(robot)
         robot = env.ReadKinBodyXMLFile('robots/man1.zae')
-        env.AddKinBody(robot)
+        env.AddKinBody(robot)        
 
         robot.left_arm = robot.GetManipulator('leftarm')
         robot.left_arm.hand = robot.left_arm.GetEndEffector()
@@ -51,7 +61,6 @@ def initialize(attach_viewer=False):
         bind_subclass(robot.left_arm.hand, HumanHand, manipulator=robot.left_arm, sim=True)
         bind_subclass(robot.right_arm.hand, HumanHand, manipulator=robot.right_arm, sim=True)
 
-
     #Setup Controller
     with env:
         controller_dof_indices = []
@@ -61,8 +70,7 @@ def initialize(attach_viewer=False):
         robot.right_arm.controller = robot.AttachController(
                 name=robot.right_arm.GetName(), args='',
                 dof_indices=robot.right_arm.GetArmIndices(), affine_dofs=0, 
-                simulated=sim
-        )
+                simulated=sim)
         robot.left_arm.controller = robot.AttachController(
                 name=robot.left_arm.GetName(), args='',
                 dof_indices=robot.left_arm.GetArmIndices(), affine_dofs=0, 
@@ -73,32 +81,31 @@ def initialize(attach_viewer=False):
         ikmodel_left = InverseKinematicsModel(
                 robot,
                 iktype=IkParameterizationType.Transform6D,
-                manip=robot.left_arm
-                )
+                manip=robot.left_arm)
         if not ikmodel_left.load():
             ikmodel_left.autogenerate()
 
         ikmodel_right = InverseKinematicsModel(
                 robot,
                 iktype=IkParameterizationType.Transform6D,
-                manip=robot.right_arm
-        )
-        if not ikmodel_right.load():
+                manip=robot.right_arm)
+        
+        if not ikmodel_right.load():            
             ikmodel_right.autogenerate()
 
     #Setup planning pipeline
     robot.planner = Sequence(
             SnapPlanner(),
             VectorFieldPlanner(),
-            CBiRRTPlanner(),
-    )
+            CBiRRTPlanner())
     robot.simplifier = None
     robot.retimer = HauserParabolicSmoother() # hack
     robot.smoother = HauserParabolicSmoother()
 
-    robot.actions = prpy.action.ActionLibrary()
+    #robot.actions = prpy.action.ActionLibrary()
 
     #Setup viewer. Default to load rviz
+    #if env.GetViewer() is None:
     if attach_viewer == True:
         attach_viewer = 'rviz'
         env.SetViewer('attach_viewer')
@@ -116,5 +123,18 @@ def initialize(attach_viewer=False):
 
     #Remove ROS Logging since loading Rviz might have added it
     prpy.logger.remove_ros_logger()
+    robot.actions = prpy.action.ActionLibrary() 
+    
+    #changing orientation
+    robotLocation = numpy.array([[ -1. ,  0. ,  0. ,   0.],
+                                [ 0. ,  0. ,  1. ,  0.],
+                                [ 0. ,  1. ,  0. ,   0.],
+                                [ 0. ,  0. ,  0. ,   1. ]])
+    #robotLocation = numpy.array([[ 0. ,  0. ,  1. ,   0.4],
+                                #[ 1. ,  0. ,  0. ,  -0.1],
+                                #[ 0. ,  1. ,  0. ,   0.3],
+                                #[ 0. ,  0. ,  0. ,   1. ]])
+    robot.SetTransform(robotLocation)
+
 
     return env, robot
