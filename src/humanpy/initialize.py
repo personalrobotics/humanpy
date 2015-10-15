@@ -105,21 +105,21 @@ def initialize(attach_viewer=False, sim=True, env=None):
     #robot.actions = prpy.action.ActionLibrary()
 
     #Setup viewer. Default to load rviz
-    #if env.GetViewer() is None:
-    if attach_viewer == True:
-        attach_viewer = 'rviz'
-        env.SetViewer('attach_viewer')
+    if env.GetViewer() is None:
+      if attach_viewer == True:
+	  attach_viewer = 'rviz'
+	  env.SetViewer('attach_viewer')
 
-        #Fallback on qtcoin if rviz couldnt load
-        if env.GetViewer is None:
-            logger.warning('Loading the Rviz viewer failed. Falling back on qtcoin')
-            attach_viewer = 'qtcoin'
+	  #Fallback on qtcoin if rviz couldnt load
+	  if env.GetViewer is None:
+	      logger.warning('Loading the Rviz viewer failed. Falling back on qtcoin')
+	      attach_viewer = 'qtcoin'
 
-    if attach_viewer and env.GetViewer() is None:
-        env.SetViewer(attach_viewer)
-        if env.GetViewer() is None:
-            raise Exception('Failed creating viewer of type "{0:s}"'.format(
-                attach_viewer))
+      if attach_viewer and env.GetViewer() is None:
+	  env.SetViewer(attach_viewer)
+	  if env.GetViewer() is None:
+	      raise Exception('Failed creating viewer of type "{0:s}"'.format(
+		  attach_viewer))
 
     #Remove ROS Logging since loading Rviz might have added it
     prpy.logger.remove_ros_logger()

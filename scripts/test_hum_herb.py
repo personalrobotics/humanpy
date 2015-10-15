@@ -9,22 +9,16 @@ from modular_action_planning.tasks.taskUtils import setupTableEnv
 #from modular_action_planning.core_actions.robot import MoveHandTo
 #from taskPlanningActions.pushGrasp import PushGrasp
 
-
-
 if __name__ == "__main__":
     
     logger = logging.getLogger('test_hum_herb')
     logger.setLevel(logging.INFO)
     
-    sim = True;
-    attach_viewer = "InteractiveMarker"
+    sim = True
+    #attach_viewer = "InteractiveMarker"
+    attach_viewer = True
     env, herb = herbpy.initialize(attach_viewer=attach_viewer, sim=sim)  
-    
-     
-    #with herb:
-       #herb.right_arm.SetStiffness(1)
-       #herb.left_arm.SetStiffness(1)  
-       
+
     _, human = humanpy.initialize(attach_viewer=attach_viewer, sim=sim, env=env)    
     humanLocation = numpy.array([[ -1. ,  0. ,  0. ,   -1.2],
                                 [ 0. ,  0. ,  1. ,  -0.6],
@@ -32,7 +26,7 @@ if __name__ == "__main__":
                                 [ 0. ,  0. ,  0. ,   1. ]])
     human.SetTransform(humanLocation)
     human.right_arm.SetActive()
-              
+
     with env:             
         #Manually add objects to the environment
         table = setupTableEnv.add_table(env, herb)
@@ -55,10 +49,10 @@ if __name__ == "__main__":
    
     # Grasp the bottle 
 
-    human.right_arm.Grasp(fuze)
+    #human.right_arm.Grasp(fuze)
     #human.right_arm.PlanToNamedConfiguration('home',execute=True)
     
-    herb.right_arm.Grasp(glass)
+    #herb.right_arm.Grasp(glass)
     #herb.right_arm.PushGrasp(glass, push_required=False)
     #herb.right_arm.PlanToNamedConfiguration('home',execute=True)
 
