@@ -26,4 +26,5 @@
     <run_depend>python-catkin-pkg</run_depend>
     <run_depend>python-enum</run_depend>
     <run_depend>python-numpy</run_depend>
+    <run_depend>herbpy</run_depend>
 </package>

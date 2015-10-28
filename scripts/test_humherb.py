@@ -1,21 +1,23 @@
 #!/usr/bin/env python
-import herbpy, humanpy, os
-#import prpy.clone
-import numpy, time, logging, math
-#import IPython
+import os
+import numpy
+import time
+import logging
+import math
 from prpy.rave import add_object
 from modular_action_planning.tasks.taskUtils import setupTableEnv
+import herbpy
+import humanpy
 #from  humanpy.action import grasping
 #from modular_action_planning.core_actions.robot import MoveHandTo
 #from taskPlanningActions.pushGrasp import PushGrasp
 
 if __name__ == "__main__":
     
-    logger = logging.getLogger('test_hum_herb')
+    logger = logging.getLogger('test_humherb')
     logger.setLevel(logging.INFO)
     
     sim = True
-    #attach_viewer = "InteractiveMarker"
     attach_viewer = True
     env, herb = herbpy.initialize(attach_viewer=attach_viewer, sim=sim)  
 
@@ -48,10 +50,8 @@ if __name__ == "__main__":
         env.AddKinBody(fuze)
    
     # Grasp the bottle 
-
     #human.right_arm.Grasp(fuze)
-    #human.right_arm.PlanToNamedConfiguration('home',execute=True)
-    
+    #human.right_arm.PlanToNamedConfiguration('home',execute=True)    
     #herb.right_arm.Grasp(glass)
     #herb.right_arm.PushGrasp(glass, push_required=False)
     #herb.right_arm.PlanToNamedConfiguration('home',execute=True)

@@ -8,9 +8,20 @@ HumanPy is a Python library for interacting with an OpenRave Model of a Human th
 You use HumanPy in your script by simply calling the ``initialize`` function:
 
 ```python
-env, robot = humanpy.initialize()
+env, robot = humanpy.initialize(attach_viewer=False, sim=True, user_id='human', env=None)
 ```
 
-Humanpy has not yet been connected up to a real human so this functionality is only available in simulation, with the option ``sim=True``. You can also optionally attach a viewer to the OpenRave environment by passing ``attach_viewer=True``.
+This function have three paremeters: sim, user_id and env
+``sim=True``: 
+it allows the use of the human in simulation, thus as a robot
 
-See ``humanpy.initialize()`` for the full list of initialization options.
+``sim=False``:
+it allows the use of the human as a representative of a real human that is present in the environment. The Virtual human is moved on the basis fo the data coming from the kinect
+
+``user_id=id`` :
+it is required in order to have different humans in the same environment. It has to be defined both for ``sim=True`` and ``sim=False``
+env is the environment. It allows to use of an environmet containing herb. If env is not set, a new environment is generated.
+
+You can also optionally attach a viewer to the OpenRave environment by passing ``attach_viewer=True``.
+
+
