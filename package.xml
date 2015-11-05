@@ -27,4 +27,5 @@
     <run_depend>python-enum</run_depend>
     <run_depend>python-numpy</run_depend>
     <run_depend>herbpy</run_depend>
+    <run_depend>k2_client</run_depend>
 </package>

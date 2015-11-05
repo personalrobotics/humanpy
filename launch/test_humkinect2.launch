@@ -1,0 +1,5 @@
+<launch>
+    <include file="$(find k2_client)/launch/k2_client.launch" respawn="false" output="screen"/>
+    <include file="$(find k2_client_vis)/launch/k2_client_vis.launch" respawn="false" output="screen"/>    
+    <node name="test_humkinect2" pkg="humanpy" type="test_humkinect2.py" respawn="false" output="screen"/>
+</launch>

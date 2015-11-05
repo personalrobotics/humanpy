@@ -2,8 +2,10 @@ PACKAGE = 'humanpy'
 import numpy
 import rospy
 import rospkg
-import humanpy
+import collections
+from scipy import signal
 from tf import transformations, LookupException, ConnectivityException, ExtrapolationException
+import humanpy
 
 
 BASE_FRAME = '/map'
@@ -41,7 +43,7 @@ class Orhuman(object):
 
     def getSkeletonTransformation(self, tf, tf_name, world_name=BASE_FRAME):
         tf_name_full = self.getFullTfName(tf_name)
-        if tf.frameExists(tf_name_full) and tf.frameExists(world_name):    
+        if tf.frameExists(tf_name_full) and tf.frameExists(world_name):   
             try:                
                 time = tf.getLatestCommonTime(tf_name_full, world_name)
                 pos, quat = tf.lookupTransform(world_name, tf_name_full, time)
@@ -59,19 +61,21 @@ class Orhuman(object):
     def getUpperLimbAngles(self, tf, side):
         if side == 'L':        
             #4: elbow (-x), #3: shoulder 3 (y), #2: shoulder 2 (z), #1: shoulder (-x) in kin frame
-            sys_shoulder = self.getSkeletonTransformation(tf, 'left_shoulder', KIN_FRAME)
-            sys_elbow = self.getSkeletonTransformation(tf, 'left_elbow', KIN_FRAME)
-            sys_hand = self.getSkeletonTransformation(tf, 'left_hand', KIN_FRAME)
+            sys_shoulder = self.getSkeletonTransformation(tf, 'ShoulderLeft', KIN_FRAME)
+            sys_elbow = self.getSkeletonTransformation(tf, 'ElbowLeft', KIN_FRAME)
+            sys_hand = self.getSkeletonTransformation(tf, 'HandLeft', KIN_FRAME)
         else:
             #4: elbow (-x), #3: shoulder 3 (-y), #2: shoulder 2 (-z), #1: shoulder (-x)  in kin frame
-            sys_shoulder = self.getSkeletonTransformation(tf, 'right_shoulder', KIN_FRAME)
-            sys_elbow = self.getSkeletonTransformation(tf, 'right_elbow', KIN_FRAME)
-            sys_hand = self.getSkeletonTransformation(tf, 'right_hand', KIN_FRAME)
+            sys_shoulder = self.getSkeletonTransformation(tf, 'ShoulderRight', KIN_FRAME)
+            sys_elbow = self.getSkeletonTransformation(tf, 'ElbowRight', KIN_FRAME)
+            sys_hand = self.getSkeletonTransformation(tf, 'HandRight', KIN_FRAME)
+        
+        sys_shcen = self.getSkeletonTransformation(tf, 'SpineShoulder', KIN_FRAME)
            
-        if sys_shoulder is None or sys_elbow is None or sys_hand is None:
+        if sys_shoulder is None or sys_elbow is None or sys_hand is None or sys_shcen is None:
             return None
         
-        sys_sh_elb = numpy.dot(numpy.linalg.inv(sys_shoulder), sys_elbow)
+        sys_shcen_elb = numpy.dot(numpy.linalg.inv(sys_shcen), sys_elbow)
         
         vect_es = (sys_shoulder[0:3,3] - sys_elbow[0:3,3])/ \
                   numpy.linalg.norm([sys_shoulder[0:3,3] - sys_elbow[0:3,3]])
@@ -85,7 +89,7 @@ class Orhuman(object):
             q2 = numpy.asscalar(numpy.arcsin(self.checkArg(-vect_es[0])))                   #[-pi/2,pi/2]
         else:
             q2 = numpy.asscalar(numpy.arcsin(self.checkArg(vect_es[0]))) 
-        if sys_sh_elb[1,3] > 0:                                                             #projection on y of the sys origin. if y positive, add pi/2
+        if sys_shcen_elb[1,3] > 0:                                                             #projection on y of the SpineShoulder. if y positive, add pi/2
             q2 = q2 + numpy.sign(q2)*numpy.pi/2                                             #[-pi,pi]
 
         if numpy.abs(numpy.cos(q2)) > 0.1:
@@ -93,7 +97,7 @@ class Orhuman(object):
             if numpy.asscalar(numpy.arcsin(self.checkArg(-vect_es[2]/numpy.cos(q2)))) < 0:  #[-pi,pi]
                 q1 = -q1
             
-            q3 = numpy.arccos(self.checkArg(-vect_norm_es_eh[0]/numpy.cos(q2)))                
+            q3 = numpy.asscalar(numpy.arccos(self.checkArg(-vect_norm_es_eh[0]/numpy.cos(q2))))                
         else:
             q1 = None
             q3 = None
@@ -102,13 +106,13 @@ class Orhuman(object):
 
     def getLowerLimbAngles(self, tf, side):
         if side == 'L':        
-            sys_hip = self.getSkeletonTransformation(tf, 'left_hip')
-            sys_knee = self.getSkeletonTransformation(tf, 'left_knee')
-            sys_foot = self.getSkeletonTransformation(tf, 'left_foot')
+            sys_hip = self.getSkeletonTransformation(tf, 'HipLeft', KIN_FRAME)
+            sys_knee = self.getSkeletonTransformation(tf, 'KneeLeft', KIN_FRAME)
+            sys_foot = self.getSkeletonTransformation(tf, 'AnkleLeft', KIN_FRAME)
         else:            
-            sys_hip = self.getSkeletonTransformation(tf, 'right_hip')
-            sys_knee = self.getSkeletonTransformation(tf, 'right_knee')
-            sys_foot = self.getSkeletonTransformation(tf, 'right_foot')
+            sys_hip = self.getSkeletonTransformation(tf, 'HipRight', KIN_FRAME)
+            sys_knee = self.getSkeletonTransformation(tf, 'KneeRight', KIN_FRAME)
+            sys_foot = self.getSkeletonTransformation(tf, 'AnkleRight', KIN_FRAME)
             
         if sys_hip is None or sys_knee is None or sys_foot is None:
             return None
@@ -119,10 +123,10 @@ class Orhuman(object):
                   numpy.linalg.norm([sys_knee[0:3,3] - sys_foot[0:3,3]])
         q2 = - numpy.arccos(self.checkArg(numpy.asscalar(numpy.dot(vect_kh.T,vect_fk))))
         
-        q1 = numpy.asscalar(numpy.arccos(vect_kh[1])) 
-        if numpy.asscalar(numpy.arcsin(vect_kh[2])) > 0:                                    #[-pi,pi]
+        q1 = numpy.asscalar(numpy.arccos(vect_kh[1]))                                       #[0,pi]
+        if numpy.asscalar(numpy.arcsin(vect_kh[2])) < 0:                                    #[-pi,pi]
             q1 = -q1 
-        q1 = q1 - numpy.sign(q1)*numpy.pi/2
+        
         return [q1, q2]
   
     def checkLimits(self, joint, angle_vect, angle_elem):
@@ -130,9 +134,10 @@ class Orhuman(object):
             angle = angle_vect[angle_elem]
             if angle is not None and joint is not None:
                 lower,upper = joint.GetLimits()
-                if angle < lower: angle = lower 
+                if angle < lower: angle = lower
                 if angle > upper: angle = upper
-                self.currentDOFvalues[joint.GetDOFIndex()] = angle
+                
+                self.currentDOFvalues[joint.GetDOFIndex()] = angle           
                 self.body.SetDOFValues(self.currentDOFvalues)
         
     def update(self, tf):
@@ -144,15 +149,8 @@ class Orhuman(object):
             self.show()
         
         #Chest
-        person_transform = self.getSkeletonTransformation(tf, 'torso')
-        if person_transform is not None: 
-            #human face to kinect
-            person_orient_change =  numpy.array([[ -1. ,  0. ,  0. ,  0.],
-                                                [   0. ,  1. ,  0. ,  0.],
-                                                [   0. ,  0. , -1. ,  0.],
-                                                [   0. ,  0. ,  0. ,  1. ]])
-            person_transform = numpy.dot(person_transform, person_orient_change)
-            
+        person_transform = self.getSkeletonTransformation(tf, 'SpineBase')        
+        if person_transform is not None:           
             #requied to have human standing 
             #angle/axis rotation for the alignment of human y with world z
             th = numpy.arccos(numpy.asscalar(numpy.dot(numpy.array([0.,0.,1.]).T, person_transform[0:3,1])))
@@ -168,16 +166,18 @@ class Orhuman(object):
             a32 = axis[2]*axis[1]*(1 - numpy.cos(th)) + axis[0]*numpy.sin(th)
             a33 = numpy.cos(th) + numpy.square(axis[2])*(1 - numpy.cos(th))
             matrix_rot = numpy.array([[a11, a12 ,a13],
-                                      [a21, a22, a23],
-                                      [a31, a32, a33]])
+                                        [a21, a22, a23],
+                                        [a31, a32, a33]])
             
             person_position_transform_rot = numpy.dot(matrix_rot, person_transform[0:3,0:3])
             person_position_transform = numpy.zeros((4, 4))
             person_position_transform[0:3,0:3] = person_position_transform_rot
             person_position_transform[0:4,3] = person_transform[0:4,3]
+            person_position_transform[2,3] = 0.85
             self.body.SetTransform(person_position_transform)
+
         
-        #Left arm
+        ##Left arm
         ul_angles = self.getUpperLimbAngles(tf, 'L')
         self.checkLimits(self.body.GetJoint('JLShoulder'), ul_angles, 0)
         self.checkLimits(self.body.GetJoint('JLShoulder2'), ul_angles, 1)
@@ -201,8 +201,8 @@ class Orhuman(object):
         self.checkLimits(self.body.GetJoint('JRThigh'), ul_angles, 0)
         self.checkLimits(self.body.GetJoint('JRCalf'), ul_angles, 1)
                 
-        #TODO; head, neck    
-              
+        #TODO; head, neck   
+
 
 def humanInList(human, ids):
     for id in ids:
@@ -211,7 +211,7 @@ def humanInList(human, ids):
         
 def addRemoveHumans(tf, humans, env):
     import re
-    matcher = re.compile('.*user_(\\d+).*')
+    matcher = re.compile('.*user_(\\d+).*')    
     all_tfs = tf.getFrameStrings()
     all_human_ids = []
     for frame_name in all_tfs:
@@ -235,4 +235,7 @@ def addRemoveHumans(tf, humans, env):
                 break
         if not found:
             humans.append(Orhuman('user_' + id, env))
+
+
+
 

@@ -26,6 +26,6 @@ if __name__ == "__main__":
         bowl = setupTableEnv.place_bowl_on_table(env, table, .45, .8)
         plate = setupTableEnv.place_plate_on_table(env, table, .3, .8)
 
-    herb.DetectHuman(env)
+    herb.DetectHuman(env, orhuman=1)
 
 
