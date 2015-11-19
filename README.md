@@ -25,3 +25,15 @@ env is the environment. It allows to use of an environmet containing herb. If en
 You can also optionally attach a viewer to the OpenRave environment by passing ``attach_viewer=True``.
 
 
+## Using humanpy with the herb ##
+`test_humherb.py` shows how to load the human and herb in the same environment. 
+
+## Using humanpy with the kinect 1 ##
+`test_humkinect1.py` contains an example on how to use the data coming from the kinect 1 (through `openni2_tracker` - https://github.com/personalrobotics/openni2-tracker).
+The example call the herb initialization function and than load the human robot.
+
+
+## Using humanpy with the kinect 2 ##
+`test_humkinect2.py` contains an example on how to use the data coming from the kinect 2 (through `k2_client` - https://github.com/personalrobotics/k2_client and `k2_client_vis` - https://github.com/personalrobotics/k2_client_vis).
+The example call the herb initialization function and than load the human robot.
+The example can be launched through `test_humkinect2.launch`.
