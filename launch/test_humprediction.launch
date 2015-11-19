@@ -1,0 +1,32 @@
+<launch>
+    <node name="hum_goal_prediction_1" pkg="humanpy" type="goalprediction.py" respawn="true" output="screen">
+        <param name="user_hand" value="R"/>
+        <param name="user_id" value="1"/>
+    </node>
+    
+    <node name="hum_goal_prediction_2" pkg="humanpy" type="goalprediction.py" respawn="true" output="screen">
+        <param name="user_hand" value="R"/>
+        <param name="user_id" value="2"/>
+    </node>
+    
+    <node name="hum_goal_prediction_3" pkg="humanpy" type="goalprediction.py" respawn="true" output="screen">
+        <param name="user_hand" value="R"/>
+        <param name="user_id" value="3"/>
+    </node>
+    
+    <node name="hum_goal_prediction_4" pkg="humanpy" type="goalprediction.py" respawn="true" output="screen">
+        <param name="user_hand" value="R"/>
+        <param name="user_id" value="4"/>
+    </node>
+    
+    <node name="hum_goal_prediction_5" pkg="humanpy" type="goalprediction.py" respawn="true" output="screen">
+        <param name="user_hand" value="R"/>
+        <param name="user_id" value="5"/>
+    </node>
+    
+    <node name="hum_goal_prediction_6" pkg="humanpy" type="goalprediction.py" respawn="true" output="screen">
+        <param name="user_hand" value="R"/>
+        <param name="user_id" value="6"/>
+    </node>   
+</launch>
+

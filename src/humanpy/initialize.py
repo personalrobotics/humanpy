@@ -27,7 +27,11 @@ def initialize(attach_viewer = False, sim = True, user_id = 'human', env = None)
     """Initialize the Human Robot"""
     
     prpy.logger.initialize_logging()
-
+    
+    if not sim: 
+        sim = True
+        logger.Warning('Only simulation mode is available')
+    
     if not env:
         env = Environment()
 
@@ -37,7 +41,6 @@ def initialize(attach_viewer = False, sim = True, user_id = 'human', env = None)
         robot.SetName(user_id)              #needed in order to have different humans in the same env
         env.AddKinBody(robot)        
 
-    if sim:
         robot.left_arm = robot.GetManipulator('leftarm')
         robot.left_arm.hand = robot.left_arm.GetEndEffector()
         robot.left_hand = robot.left_arm.hand
@@ -46,12 +49,12 @@ def initialize(attach_viewer = False, sim = True, user_id = 'human', env = None)
         robot.right_arm.hand = robot.right_arm.GetEndEffector()
         robot.right_hand = robot.right_arm.hand
 
-        bind_subclass(robot, Robot, robot_name='user_id')
+        bind_subclass(robot, Robot, robot_name=user_id)
         bind_subclass(robot.left_arm, Manipulator)
         bind_subclass(robot.right_arm, Manipulator)
+    
         bind_subclass(robot.left_arm.hand, HumanHand, manipulator=robot.left_arm, sim=True)
         bind_subclass(robot.right_arm.hand, HumanHand, manipulator=robot.right_arm, sim=True)
-
         
         #Setup Controller
         with env:

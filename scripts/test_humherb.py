@@ -22,8 +22,8 @@ if __name__ == "__main__":
     env, herb = herbpy.initialize(attach_viewer=attach_viewer, sim=sim)  
 
     _, human = humanpy.initialize(attach_viewer=attach_viewer, sim=sim, env=env)    
-    humanLocation = numpy.array([[ -1. ,  0. ,  0. ,   -1.2],
-                                [ 0. ,  0. ,  1. ,  -0.6],
+    humanLocation = numpy.array([[ -1. ,  0. ,  0. ,   -0.8],  #-1.2
+                                [ 0. ,  0. ,  1. ,  -0.4],   #-0.5
                                 [ 0. ,  1. ,  0. ,   0.85],
                                 [ 0. ,  0. ,  0. ,   1. ]])
     human.SetTransform(humanLocation)
@@ -34,9 +34,9 @@ if __name__ == "__main__":
         table = setupTableEnv.add_table(env, herb)
         table.SetName('table')
         setupTableEnv.set_robot_pose(env, herb, table)  
-        glass = setupTableEnv.place_glass_on_table(env, table, .2, .7)
-        bowl = setupTableEnv.place_bowl_on_table(env, table, .45, .8)
-        plate = setupTableEnv.place_plate_on_table(env, table, .3, .8)
+        glass = setupTableEnv.place_glass_on_table(env, table, .7, .4)
+        bowl = setupTableEnv.place_bowl_on_table(env, table, .45, .6)
+        plate = setupTableEnv.place_plate_on_table(env, table, .2, .5)
         
         # add a fuze bottle on top of the table
         fuze = add_object(env, 'fuze_bottle', 'objects/fuze_bottle.kinbody.xml')
@@ -52,10 +52,28 @@ if __name__ == "__main__":
     # Grasp the bottle 
     #human.right_arm.Grasp(fuze)
     #human.right_arm.PlanToNamedConfiguration('home',execute=True)    
-    #herb.right_arm.Grasp(glass)
+    #herb.left_arm.Grasp(glass)
+    herb.right_arm.Grasp(bowl)
     #herb.right_arm.PushGrasp(glass, push_required=False)
     #herb.right_arm.PlanToNamedConfiguration('home',execute=True)
+    
+    
+    
 
     raw_input("press enter to quit!")
+    
+    
+    
+    
+    #config = human.GetActiveDOFValues()
+    #config[0] = -numpy.pi/5
+    #config[3] = -numpy.pi/4
+    #human.SetActiveDOFValues(config)
+    #config = human.GetActiveDOFValues()
+    #config[0] = -numpy.pi/5
+    #config[1] = -numpy.pi/12
+    #config[2] = numpy.pi/2
+    #config[3] = -numpy.pi/6
+    #human.SetActiveDOFValues(config)
         
         
