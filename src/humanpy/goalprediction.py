@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+PACKAGE = 'humanpy'
 import math
 import prpy
 import tf
@@ -79,25 +80,26 @@ class goal_prediction():
                       #hand_pose.orientation.z, 
                       #hand_pose.orientation.w])
         
-        if self.ee_pos_u_init:
-            self.ee_pos_s = currpos #starting pos
-            self.ee_pos_up = currpos
-            self.ee_pos_u_init = False
+        if len(self.obj_pos) > 0:     #wait for published objects
+            if self.ee_pos_u_init:
+                self.ee_pos_s = currpos #starting pos
+                self.ee_pos_up = currpos
+                self.ee_pos_u_init = False          
+       
+            self.cost_ee_pos_s_ee_pos_u += self.cost(self.ee_pos_up, currpos)
+            prob_goal = 1./len(self.obj_pos)   #equal probability of the abstacles
+            tot_prob = 0
+            for i in range(len(self.obj_pos)):  
+                self.prob_traj_goals[i] = self.prob_traj_goal(currpos, self.obj_pos[i])
+                tot_prob +=  self.prob_traj_goals[i]*prob_goal
             
-        self.cost_ee_pos_s_ee_pos_u += self.cost(self.ee_pos_up, currpos)
-        prob_goal = 1./len(self.obj_pos)   #equal probability of the abstacles
-        tot_prob = 0
-        for i in range(len(self.obj_pos)):  
-            self.prob_traj_goals[i] = self.prob_traj_goal(currpos, self.obj_pos[i])
-            tot_prob +=  self.prob_traj_goals[i]*prob_goal
+            prob_goal_traj = Float32MultiArray();                
+            for i in range(len(self.obj_pos)):
+                pro = self.prob_traj_goals[i]*prob_goal/tot_prob
+                prob_goal_traj.data.append(pro)
+            self.prob_goal_traj_pub.publish(prob_goal_traj)
         
-        prob_goal_traj = Float32MultiArray();                
-        for i in range(len(self.obj_pos)):
-            pro = self.prob_traj_goals[i]*prob_goal/tot_prob
-            prob_goal_traj.data.append(pro)
-        self.prob_goal_traj_pub.publish(prob_goal_traj)
-        
-        self.ee_pos_up = currpos
+            self.ee_pos_up = currpos
    
     def listener(self):
         """
@@ -113,13 +115,13 @@ class goal_prediction():
 
 
 if __name__ == "__main__":   
-    time_to_start = 6.0
+    time_to_start = 4.0
     while time_to_start > 0.0:
         time.sleep(1)
         time_to_start -= 1 
-        print 'Starting in ', time_to_start
     
     prpy.logger.initialize_logging()
+    logger.info('Starting probability evaluation..... ')
    
     rospy.init_node('hg_prediction', anonymous=True)
     

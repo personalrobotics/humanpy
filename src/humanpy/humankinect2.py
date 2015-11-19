@@ -214,7 +214,6 @@ class Orhuman(object):
         self.env_obj.publish(poselist)
      
     def callback_color_obj(self, prob_goal_traj):
-        print 'prob_goal_traj', prob_goal_traj
         count_obj = 0     
         if len(prob_goal_traj.data) > 0:
             for obj in self.body.GetEnv().GetBodies():
