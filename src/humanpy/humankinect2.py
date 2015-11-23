@@ -219,14 +219,24 @@ class Orhuman(object):
             for obj in self.body.GetEnv().GetBodies():
                 for ref_name in REF_OBJ:                
                     if ref_name in obj.GetName(): 
-                        if prob_goal_traj.data[count_obj] < 0.15:
+                        if prob_goal_traj.data[count_obj] < 0.1:
                             color = numpy.array([0.745, 0.745, 0.745]) #gray
-                        elif prob_goal_traj.data[count_obj] < 0.3:
+                        elif prob_goal_traj.data[count_obj] < 0.2:
                             color = numpy.array([0.0, 1.0, 0.0]) #verde
+                        elif prob_goal_traj.data[count_obj] < 0.3:
+                            color = numpy.array([0.2, 0.8, 0.0]) #verde
                         elif prob_goal_traj.data[count_obj] < 0.4:
+                            color = numpy.array([0.4, 0.7, 0.0]) #giallo
+                        elif prob_goal_traj.data[count_obj] < 0.5:
                             color = numpy.array([0.5, 0.6, 0.0]) #giallo
+                        elif prob_goal_traj.data[count_obj] < 0.6:
+                            color = numpy.array([0.6, 0.5, 0.0]) #orange
                         elif prob_goal_traj.data[count_obj] < 0.7:
+                            color = numpy.array([0.7, 0.4, 0.0]) #orange
+                        elif prob_goal_traj.data[count_obj] < 0.8:
                             color = numpy.array([0.8, 0.3, 0.0]) #orange
+                        elif prob_goal_traj.data[count_obj] < 0.9:
+                            color = numpy.array([0.9, 0.2, 0.0]) #orange
                         else:
                             color = numpy.array([1.0, 0.0, 0.0]) #red
                         obj.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(color)

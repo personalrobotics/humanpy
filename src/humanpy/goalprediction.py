@@ -13,6 +13,10 @@ from std_msgs.msg import Float32MultiArray
 
 
 logger = logging.getLogger('goalprediction')
+W = 1.5
+
+import os
+FILE = open('/home/spelle/check.log', 'w')
 
 
 class goal_prediction():
@@ -20,12 +24,11 @@ class goal_prediction():
         self.user_hand = user_hand
         self.user_id = user_id
         self.cost_ee_pos_s_ee_pos_u = 0 
-        self.obj_pos = []  #list of array of lenght 3 (1 array for each goal)
-        self.prob_traj_goals = []  #[num_goal]
+        self.ee_pos_gs = []  #list of array of lenght 3 (1 array for each goal)
+        self.prob_tg_prob_g = []  #[num_goal]
         self.ee_pos_u_init = True
         self.ee_pos_s = numpy.zeros(3)
         self.ee_pos_up = numpy.zeros(3)
-        self.unreachedgoal = True
         self.prob_goal_traj_pub = rospy.Publisher('/skel/prob_goal_user_' + self.user_id , 
                                                   Float32MultiArray, queue_size=10)
 
@@ -38,25 +41,15 @@ class goal_prediction():
         min_dist = 0.0
         for i in range(len(ee_pos_s)):
             min_dist += math.pow(ee_pos_f[i] - ee_pos_s[i],2)              
-        return math.sqrt(min_dist)
+        return math.sqrt(min_dist)*W
         
-    def prob_traj_goal(self, ee_pos_u, ee_pos_g):   
-        """
-        probability of moving from strating position s to current position u given the goal position g 
-        @param ee_pos_g - hand effector goal position 
-        @param ee_pos_u - hand effector current position 
-        """
-        num = math.exp(-math.pow(self.cost_ee_pos_s_ee_pos_u + self.cost(ee_pos_u, ee_pos_g),2))
-        den = math.exp(-math.pow(self.cost(self.ee_pos_s, ee_pos_g),2))
-        return (num/den)
 
     def callback_env_obj_pose(self, obj_poses):
         """
         read object/goal positions 
         @param obj_poses - list of objects/goal
         """
-        self.obj_pos = []
-        self.prob_traj_goals = numpy.zeros(len(obj_poses.poses))
+        self.ee_pos_gs = []
         for i in range(len(obj_poses.poses)):
             currpos = numpy.array([obj_poses.poses[i].position.x, 
                        obj_poses.poses[i].position.y, 
@@ -65,7 +58,7 @@ class goal_prediction():
                           #obj_poses.poses[i].orientation.y, 
                           #obj_poses.poses[i].orientation.z, 
                           #obj_poses.poses[i].orientation.w])
-            self.obj_pos.append(currpos)
+            self.ee_pos_gs.append(currpos)
         
     def callback_user(self, hand_pose):
         """
@@ -80,26 +73,42 @@ class goal_prediction():
                       #hand_pose.orientation.z, 
                       #hand_pose.orientation.w])
         
-        if len(self.obj_pos) > 0:     #wait for published objects
+        if len(self.ee_pos_gs) > 0:     #wait for published objects
+            ee_pos_g_curr = copy.deepcopy(self.ee_pos_gs)  #to be sure to not have variable changes during callback
             if self.ee_pos_u_init:
                 self.ee_pos_s = currpos #starting pos
                 self.ee_pos_up = currpos
+                self.goal_den = numpy.zeros(len(ee_pos_g_curr))
+                for i in range(len(ee_pos_g_curr)):                    
+                    self.goal_den[i] = math.exp(-math.pow(self.cost(self.ee_pos_s, ee_pos_g_curr[i]),2))
                 self.ee_pos_u_init = False          
-       
-            self.cost_ee_pos_s_ee_pos_u += self.cost(self.ee_pos_up, currpos)
-            prob_goal = 1./len(self.obj_pos)   #equal probability of the abstacles
-            tot_prob = 0
-            for i in range(len(self.obj_pos)):  
-                self.prob_traj_goals[i] = self.prob_traj_goal(currpos, self.obj_pos[i])
-                tot_prob +=  self.prob_traj_goals[i]*prob_goal
             
-            prob_goal_traj = Float32MultiArray();                
-            for i in range(len(self.obj_pos)):
-                pro = self.prob_traj_goals[i]*prob_goal/tot_prob
+            self.prob_tg_prob_g = numpy.zeros(len(ee_pos_g_curr))   
+
+            self.cost_ee_pos_s_ee_pos_u += self.cost(self.ee_pos_up, currpos)
+            prob_goal = 1./len(ee_pos_g_curr)   #equal probability of the abstacles
+            for i in range(len(ee_pos_g_curr)): 
+
+                self.cost_ee_pos_s_ee_pos_u += self.cost(self.ee_pos_up, currpos)
+                goal_num = math.exp(-math.pow(self.cost_ee_pos_s_ee_pos_u + 
+                                              self.cost(currpos, ee_pos_g_curr[i]),2))
+                self.prob_tg_prob_g[i] = goal_num/self.goal_den[i]*prob_goal
+           
+            tot_prob =  numpy.sum(self.prob_tg_prob_g)            
+            prob_goal_traj = Float32MultiArray();      
+            print '--------------'            
+            for i in range(len(ee_pos_g_curr)):
+                pro = self.prob_tg_prob_g[i]/tot_prob
+                if math.isnan(pro):
+                    pro = 0.0
+                print pro
                 prob_goal_traj.data.append(pro)
             self.prob_goal_traj_pub.publish(prob_goal_traj)
-        
+            
             self.ee_pos_up = currpos
+            
+            
+            
    
     def listener(self):
         """

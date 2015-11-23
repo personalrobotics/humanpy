@@ -47,7 +47,7 @@ if __name__ == "__main__":
         fuze_pose = fuze.GetTransform()
         fuze_pose[:3,3] = numpy.transpose([x, y, z])
         fuze.SetTransform(fuze_pose)
-        env.AddKinBody(fuze)
+        #env.AddKinBody(fuze)
    
     # Grasp the bottle 
     #human.right_arm.Grasp(fuze)
@@ -61,19 +61,5 @@ if __name__ == "__main__":
     
 
     raw_input("press enter to quit!")
-    
-    
-    
-    
-    #config = human.GetActiveDOFValues()
-    #config[0] = -numpy.pi/5
-    #config[3] = -numpy.pi/4
-    #human.SetActiveDOFValues(config)
-    #config = human.GetActiveDOFValues()
-    #config[0] = -numpy.pi/5
-    #config[1] = -numpy.pi/12
-    #config[2] = numpy.pi/2
-    #config[3] = -numpy.pi/6
-    #human.SetActiveDOFValues(config)
-        
+ 
         
