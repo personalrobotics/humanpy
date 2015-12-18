@@ -12,11 +12,14 @@ from geometry_msgs.msg import Pose, PoseArray
 from std_msgs.msg import Float32MultiArray
 
 
-logger = logging.getLogger('goalprediction')
-W = 1.5
 
-import os
-FILE = open('/home/spelle/check.log', 'w')
+logger = logging.getLogger('goalprediction')
+logger.setLevel(logging.INFO)
+W = 6#2.5
+
+
+#import os
+#FILE = open('/home/spelle/check.log', 'w')
 
 
 class goal_prediction():
@@ -31,6 +34,11 @@ class goal_prediction():
         self.ee_pos_up = numpy.zeros(3)
         self.prob_goal_traj_pub = rospy.Publisher('/skel/prob_goal_user_' + self.user_id , 
                                                   Float32MultiArray, queue_size=10)
+        #self.rate = rospy.Rate(200)          
+        if self.user_hand == 'R':
+            self.sub_id = '/skel/user_' + str(self.user_id) + '/rhand_pos'
+        else:
+            self.sub_id = '/skel/user_' + str(self.user_id) + '/lhand_pos'    
 
     def cost(self, ee_pos_f, ee_pos_s):
         """
@@ -42,7 +50,6 @@ class goal_prediction():
         for i in range(len(ee_pos_s)):
             min_dist += math.pow(ee_pos_f[i] - ee_pos_s[i],2)              
         return math.sqrt(min_dist)*W
-        
 
     def callback_env_obj_pose(self, obj_poses):
         """
@@ -83,44 +90,55 @@ class goal_prediction():
                     self.goal_den[i] = math.exp(-math.pow(self.cost(self.ee_pos_s, ee_pos_g_curr[i]),2))
                 self.ee_pos_u_init = False          
             
-            self.prob_tg_prob_g = numpy.zeros(len(ee_pos_g_curr))   
-
+            self.prob_tg_prob_g = numpy.zeros(len(ee_pos_g_curr))  
             self.cost_ee_pos_s_ee_pos_u += self.cost(self.ee_pos_up, currpos)
             prob_goal = 1./len(ee_pos_g_curr)   #equal probability of the abstacles
-            for i in range(len(ee_pos_g_curr)): 
-
-                self.cost_ee_pos_s_ee_pos_u += self.cost(self.ee_pos_up, currpos)
+            for i in range(len(ee_pos_g_curr)):                 
                 goal_num = math.exp(-math.pow(self.cost_ee_pos_s_ee_pos_u + 
                                               self.cost(currpos, ee_pos_g_curr[i]),2))
                 self.prob_tg_prob_g[i] = goal_num/self.goal_den[i]*prob_goal
            
-            tot_prob =  numpy.sum(self.prob_tg_prob_g)            
-            prob_goal_traj = Float32MultiArray();      
-            print '--------------'            
+            tot_prob =  numpy.sum(self.prob_tg_prob_g)   
+            prob_goal_traj = Float32MultiArray()     
+           
             for i in range(len(ee_pos_g_curr)):
                 pro = self.prob_tg_prob_g[i]/tot_prob
                 if math.isnan(pro):
                     pro = 0.0
-                print pro
                 prob_goal_traj.data.append(pro)
             self.prob_goal_traj_pub.publish(prob_goal_traj)
             
+            
+            #FILE.write('*********************' + os.linesep)
+            #FILE.write('len_s_u ' + str(self.cost_ee_pos_s_ee_pos_u) + os.linesep)
+            #FILE.write('cost_s_u ' + str((-math.pow(self.cost_ee_pos_s_ee_pos_u,2))) + os.linesep)
+            #FILE.write('tot_prob ' + str(tot_prob) + os.linesep)
+            
+            ##for i in range(len(ee_pos_g_curr)):
+                #FILE.write('--------------------------' + os.linesep)
+                #FILE.write('obst' + str(i) + os.linesep)              
+                #FILE.write('len_u_g ' + str(self.cost(currpos, ee_pos_g_curr[i])) + os.linesep)
+                #FILE.write('len_s_g ' + str(self.cost(self.ee_pos_s, ee_pos_g_curr[i])) + os.linesep)               
+                #FILE.write('cost_u_g ' + str((-math.pow(self.cost(currpos, ee_pos_g_curr[i]),2))) + os.linesep)
+                #FILE.write('cost_s_u_g ' + str(math.exp(-math.pow(self.cost_ee_pos_s_ee_pos_u,2)- 
+                                               #math.pow(self.cost(currpos, ee_pos_g_curr[i]),2))) + os.linesep)
+                #FILE.write('cost_s_g ' + str(self.goal_den[i]) + os.linesep)
+                #FILE.write('num/den ' + str(math.exp(-math.pow(self.cost_ee_pos_s_ee_pos_u +
+                                               #self.cost(currpos, ee_pos_g_curr[i]),2))/self.goal_den[i]) + os.linesep)
+                #FILE.write('tot_prob' + str(tot_prob) + os.linesep)              
+                #FILE.write('num/den*probg ' + str((math.exp(-math.pow(self.cost_ee_pos_s_ee_pos_u +
+                                               #self.cost(currpos, ee_pos_g_curr[i]),2))/self.goal_den[i])*prob_goal/tot_prob) + os.linesep)
+
             self.ee_pos_up = currpos
-            
-            
-            
-   
+      
     def listener(self):
         """
         initialiazes two subscriber and the probability evluation
-        """
-        rospy.Subscriber('/env_obj_pos', PoseArray, self.callback_env_obj_pose)
-        if self.user_hand == 'R':
-            sub_id = '/skel/user_' + str(self.user_id) + '/rhand_pos'
-        else:
-            sub_id = '/skel/user_' + str(self.user_id) + '/lhand_pos'
-        rospy.Subscriber(sub_id, Pose, self.callback_user)
+        """ 
+        rospy.Subscriber('/env_obj/pos', PoseArray, self.callback_env_obj_pose)         
+        rospy.Subscriber(self.sub_id, Pose, self.callback_user)                    
         rospy.spin()
+        
 
 
 if __name__ == "__main__":   
@@ -131,11 +149,14 @@ if __name__ == "__main__":
     
     prpy.logger.initialize_logging()
     logger.info('Starting probability evaluation..... ')
-   
-    rospy.init_node('hg_prediction', anonymous=True)
-    
+
+    n = rospy.init_node('hg_prediction', anonymous=True)
+
     user_hand = rospy.get_param("~user_hand");
-    user_id = rospy.get_param("~user_id");
+    #user_id = rospy.get_param("~user_id");  
+    user_id = rospy.get_param("/global_user");   #wait till /global_user isinitialized by humankinect2
+    while (user_id == '0' or user_id == ''):
+        user_id = rospy.get_param("/global_user");  
 
     goal_pred = goal_prediction(str(user_id),str(user_hand))   #indicate subject number
     goal_pred.listener()

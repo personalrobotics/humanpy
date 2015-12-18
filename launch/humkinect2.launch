@@ -1,5 +1,7 @@
 <launch>
+    <param name="/global_user" value="0" type="str"/> 
     <!--include file="$(find k2_client)/launch/k2_client.launch"/-->
     <include file="$(find k2_client_vis)/launch/k2_client_vis.launch"/>    
-    <node name="human_env" pkg="humanpy" type="test_humkinect2.py" respawn="false" output="screen"/>
+        
+    <node name="human_env" pkg="humanpy" type="humkinect2.py" respawn="false" output="screen"/>
 </launch>
