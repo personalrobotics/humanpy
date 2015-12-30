@@ -28,7 +28,7 @@ KIN_FRAME = '/head/skel_depth_frame'
            #'tray', 'bowl', 'glass1', 'glass2', 'glass3',
            #'plastic_glass']
 
-REF_OBJ = ['glass1','glass2','glass3']
+REF_OBJ = ['glass1','glass2','glass3','box1','box2','box3']
 
 logger = logging.getLogger('humanpy')
 logger.setLevel(logging.INFO)
@@ -53,6 +53,7 @@ class Orhuman(object):
             import re
             self.tsrviz = []   # needed in order to visualize tsr continuosly
             self.tsrmsg = self.tsrchain()
+            self.min_tsr = None            
             
             self.cube = openravepy.RaveCreateKinBody(env,'')
             self.cube.SetName('cube')
@@ -80,6 +81,8 @@ class Orhuman(object):
             id_num = [int(s) for s in re.findall('\\d+', self.id)]
             rospy.set_param("/global_user", str(id_num[0]))
             self.rate = rospy.Rate(150) # 10hz
+            
+            self.filter_options = openravepy.IkFilterOptions.CheckEnvCollisions #or 0 for no collision checks
 
         #for joint in self.body.GetJoints():
         #    joint.SetLimits([-numpy.pi+1e-5],[numpy.pi-1e-5])
@@ -260,12 +263,17 @@ class Orhuman(object):
     
     def tsrchain(self):
         tsrmsg = PoseArrays()
-        tsrnb =  15 
+        tsrnb =  20 
         filter_options = openravepy.IkFilterOptions.CheckEnvCollisions #or 0 for no collision checks
         for obj in self.body.GetEnv().GetBodies():
             for ref_name in REF_OBJ:
                 if ref_name in obj.GetName():
-                    tsr_list = self.robot.tsrlibrary(obj, 'grasp', push_distance=0.0)
+                    if 'box' in ref_name:
+                        tsr_list = self.robot.tsrlibrary(obj, 'stamp')
+                        print 'tsr_list', tsr_list
+                    else:
+                        tsr_list = self.robot.tsrlibrary(obj, 'grasp', push_distance=0.0)
+                        
                     posar = PoseArray()
                     tsr_chain_idx = random.randint(0, len(tsr_list) - 1)                  
                     tsr_chain = tsr_list[tsr_chain_idx]                                           
@@ -423,7 +431,7 @@ class Orhuman(object):
                         #count_obj += 1
                         #break
   
-    def callback_update_twist(self, rob_new_twist):
+    def callback_update_twist(self, rob_new_twist):  
         #logger.info("entered callback_update_twist")
         twist = numpy.array([rob_new_twist.data[0],
                              rob_new_twist.data[1],
@@ -431,36 +439,46 @@ class Orhuman(object):
                              rob_new_twist.data[3],
                              rob_new_twist.data[4],
                              rob_new_twist.data[5]])
-        dqout, tout = util.ComputeJointVelocityFromTwist(self.robot, 
+        
+        vlimits = self.robot.GetDOFVelocityLimits(self.robot.GetActiveDOFIndices())
+        
+        
+        
+        if self.min_tsr is None:
+            dqout, tout = util.ComputeJointVelocityFromTwist(self.robot, 
                                                          twist, 
-                                                         joint_velocity_limits=numpy.PINF)
-                                                         #objective=util.quadraticPlusJointLimitObjective)
+                                                         joint_velocity_limits=vlimits,
+                                                         objective=util.quadraticPlusJointLimitObjective)
+        else:
+            with self.env:
+                filter_options = openravepy.IkFilterOptions.CheckEnvCollisions #or 0 for no collision checks
+                config = self.robot.GetActiveManipulator().FindIKSolution(self.min_tsr, filter_options) # will return None if no config can be found
+                #print 'config', config
+            dqout, tout = util.ComputeJointVelocityFromTwist(self.robot, 
+                                                            twist, 
+                                                            joint_velocity_limits=vlimits,                                                            
+                                                            objective=util.quadraticPlusJointConfObjective,
+                                                            q_target=config)
+
         
-        # Go as fast as possible           
-        #vlimits = self.robot.GetDOFVelocityLimits(self.robot.GetActiveDOFIndices()) 
+        # Go as fast as possible 
         #dqout = min(abs(vlimits[i] / dqout[i]) if dqout[i] != 0. else 1. for i in xrange(vlimits.shape[0])) * dqout
-        
         #for i in xrange(vlimits.shape[0]): 
             #if not abs(dqout[i]) < vlimits[i]:
                 #dqout[i] =  (vlimits[i] - 0.0001)*numpy.sign(dqout[i]) 
                 
-       ## Check collision.
-        with self.env:
-            with self.robot.CreateRobotStateSaver():
-                q = self.robot.GetActiveDOFValues()
-                self.robot.SetActiveDOFValues(q + (dqout/200))  #check on herb position in 1/100 sec 
-                report = openravepy.CollisionReport()
-                if self.env.CheckCollision(self.robot, report=report):
-                    raise CollisionPlanningError.FromReport(report)
-                elif self.robot.CheckSelfCollision(report=report):
-                    raise SelfCollisionPlanningError.FromReport(report)
-
-        # Check the termination condition.
-        #status = fn_terminate()
+        ## Check collision.
+        #with self.env:
+            #with self.robot.CreateRobotStateSaver():
+                #q = self.robot.GetActiveDOFValues()
+                #self.robot.SetActiveDOFValues(q + (dqout/20))  #check on herb position in 1/20 sec 
+                #report = openravepy.CollisionReport()
+                #if self.env.CheckCollision(self.robot, report=report):
+                    #raise CollisionPlanningError.FromReport(report)
+                #elif self.robot.CheckSelfCollision(report=report):
+                    #raise SelfCollisionPlanningError.FromReport(report)
         
-
         self.robot.right_arm.Servo(dqout) 
-
          
          
     def callback_update_min_tsr(self, new_min_tsr):
@@ -471,25 +489,26 @@ class Orhuman(object):
 
         #new_min_tsr_pos = numpy.array([new_min_tsr.data[4], new_min_tsr.data[8], new_min_tsr.data[12]])        
         self.cube.SetTransform(new_min_tsr)
+        self.min_tsr = new_min_tsr
 
   
-    def callback_update_pos(self, rob_new_pos):
-        quat = numpy.array([rob_new_pos.orientation.x, 
-                            rob_new_pos.orientation.y, 
-                            rob_new_pos.orientation.z, 
-                            rob_new_pos.orientation.w])       
-        r = transformations.quaternion_matrix(quat)
-        pose_in_world = transformations.identity_matrix()
-        pose_in_world[0:4,0:4] = r
-        pose_in_world[0:3, 3] = numpy.array([rob_new_pos.position.x, 
-                                 rob_new_pos.position.y,
-                                 rob_new_pos.position.z])
+    #def callback_update_pos(self, rob_new_pos):
+        #quat = numpy.array([rob_new_pos.orientation.x, 
+                            #rob_new_pos.orientation.y, 
+                            #rob_new_pos.orientation.z, 
+                            #rob_new_pos.orientation.w])       
+        #r = transformations.quaternion_matrix(quat)
+        #pose_in_world = transformations.identity_matrix()
+        #pose_in_world[0:4,0:4] = r
+        #pose_in_world[0:3, 3] = numpy.array([rob_new_pos.position.x, 
+                                 #rob_new_pos.position.y,
+                                 #rob_new_pos.position.z])
         
-        filter_options = openravepy.IkFilterOptions.CheckEnvCollisions #or 0 for no collision checks
-        config = self.robot.GetActiveManipulator().FindIKSolution(pose_in_world, filter_options) # will return None if no config can be found
-        traj = planner.PlanToConfiguration(robot, config, execute=True)    
-        #if traj.GetNumWaypoints() > 0:
-            #traj = robot.ExecutePath(traj)
+        ##filter_options = openravepy.IkFilterOptions.CheckEnvCollisions #or 0 for no collision checks
+        #config = self.robot.GetActiveManipulator().FindIKSolution(pose_in_world, self.filter_options) # will return None if no config can be found
+        #traj = planner.PlanToConfiguration(robot, config, execute=True)    
+        ##if traj.GetNumWaypoints() > 0:
+            ##traj = robot.ExecutePath(traj)
             
                     
 

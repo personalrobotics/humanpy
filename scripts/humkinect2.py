@@ -21,8 +21,9 @@ if __name__ == "__main__":
     
     
     indices, values = herb.configurations.get_configuration('relaxed_home') # Faster for testing
-    
-    values[7:14] = numpy.array([numpy.pi/2, 1.30, -2.2, 1.92, 0.0, 0.0, 0.0])
+    values[7:14] = numpy.array([0.7, 1.60, 2.0,  2.0222084,  
+                                0.0, 0.0, 0.0])
+    #values[7:14] = numpy.array([numpy.pi/2, 1.30, -2.9, 1.92, 0.0, 0.0, 0.0])
     #tsrpose
     #values[7:14] = numpy.array([3.87925873,-0.58320797,-0.6,1.70505191 , 
     #                             -0.79413444, -1.21603895, 1.62936963])
@@ -60,19 +61,19 @@ if __name__ == "__main__":
         glass.SetName('glass1')
         env.AddKinBody(glass)
 
-        ##glass
-        #glass2 = env.ReadKinBodyXMLFile('objects/plastic_glass.kinbody.xml')
-        ##glass2_pose = numpy.array([[1, 0, 0, -0.2423],
-                                 ##[0, 1, 0, 0.15],
-                                 ##[0, 0, 1, 0.7449],
-                                 ##[0, 0, 0, 1]]) 
-        #glass2_pose = numpy.array([[1, 0, 0, -0.8],
-                                 #[0, 1, 0, 0.45],
+        #glass
+        glass2 = env.ReadKinBodyXMLFile('objects/plastic_glass.kinbody.xml')
+        #glass2_pose = numpy.array([[1, 0, 0, -0.2423],
+                                 #[0, 1, 0, 0.15],
                                  #[0, 0, 1, 0.7449],
-                                 #[0, 0, 0, 1]])   
-        #glass2.SetTransform(glass2_pose)
-        #glass2.SetName('glass2')
-        #env.AddKinBody(glass2)
+                                 #[0, 0, 0, 1]]) 
+        glass2_pose = numpy.array([[1, 0, 0, -0.8],
+                                 [0, 1, 0, 0.45],
+                                 [0, 0, 1, 0.7449],
+                                 [0, 0, 0, 1]])   
+        glass2.SetTransform(glass2_pose)
+        glass2.SetName('glass2')
+        env.AddKinBody(glass2)
 
         #glass
         glass3 = env.ReadKinBodyXMLFile('objects/plastic_glass.kinbody.xml')
@@ -81,7 +82,7 @@ if __name__ == "__main__":
                                   #[0, 0, 1, 0.7449],
                                   #[0, 0, 0, 1]]) 
         glass3_pose = numpy.array([[1, 0, 0, -1.2],
-                                  [0, 1, 0, 0.60], #0.30  0.55
+                                  [0, 1, 0, 0.30], #0.60
                                   [0, 0, 1, 0.7449],  
                                   [0, 0, 0, 1]])   
         glass3.SetTransform(glass3_pose)
