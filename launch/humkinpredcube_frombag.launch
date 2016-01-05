@@ -32,6 +32,6 @@
     --
   
     
-    <node pkg="rosbag" type="play" name="player" output="screen" args="--hz=200 -q --duration=22 --delay=1 --clock /home/spelle/ros_ws/bag/obja/obja_2.bag"/>
+    <node pkg="rosbag" type="play" name="player" output="screen" args="--hz=200 -q --duration=35 --delay=1 --clock /home/spelle/ros_ws/bag/obja/obja_2.bag"/>
     
 </launch>

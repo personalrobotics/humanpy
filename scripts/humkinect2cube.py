@@ -21,8 +21,9 @@ if __name__ == "__main__":
     
     
     indices, values = herb.configurations.get_configuration('relaxed_home') # Faster for testing
-    values[7:14] = numpy.array([0.7, 1.60, 2.0,  2.0222084,  
-                                0.0, 0.0, 0.0])
+    #values[7:14] = numpy.array([-0.2, 1.60, 2.0,  2.0222084,  
+    #                            1.0, 0.0, 0.0])
+    values[7:14] = numpy.array([numpy.pi/2, 1.30, -2.9, 1.92, 0.0, 0.0, 0.0])
     herb.SetDOFValues(values=values, dofindices=indices)  
     
     herb.right_arm.SetActive()   
@@ -31,7 +32,7 @@ if __name__ == "__main__":
     with env:
         ee_r = herb.GetActiveManipulator().GetEndEffectorTransform()
         stamp = env.ReadKinBodyXMLFile('objects/stamp.kinbody.xml')
-        pose_hand = numpy.array([0.0, -0.02, 0.255, 1.])
+        pose_hand = numpy.array([0.0, -0.01, 0.255, 1.])
         pose_world = numpy.dot(ee_r, pose_hand)
         ee_r[0:3,3] =  pose_world[0:3]       
         stamp.SetTransform(ee_r)
@@ -51,7 +52,7 @@ if __name__ == "__main__":
         #glass
         box1 = env.ReadKinBodyXMLFile('objects/box.kinbody.xml')       
         box1_pose = numpy.array([[1, 0, 0, -0.55],
-                                  [0, 1, 0, 0.45],
+                                  [0, 1, 0, 0.55],
                                   [0, 0, 1, 0.7449],
                                   [0, 0, 0, 1]])  
         box1.SetTransform(box1_pose)
@@ -61,7 +62,7 @@ if __name__ == "__main__":
         #glass
         box2 = env.ReadKinBodyXMLFile('objects/box.kinbody.xml')
         box2_pose = numpy.array([[1, 0, 0, -0.8],
-                                 [0, 1, 0, 0.45],
+                                 [0, 1, 0, 0.55],
                                  [0, 0, 1, 0.7449],
                                  [0, 0, 0, 1]])   
         box2.SetTransform(box2_pose)

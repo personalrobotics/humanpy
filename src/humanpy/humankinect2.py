@@ -5,7 +5,7 @@ import rospkg
 import logging
 import collections
 from geometry_msgs.msg import Pose, PoseArray
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float32MultiArray, Bool
 from msg import PoseArrays
 from scipy import signal
 from tf import transformations, LookupException, ConnectivityException, ExtrapolationException
@@ -17,9 +17,6 @@ from prpy import util, viz
 from prpy.planning.exceptions import CollisionPlanningError, SelfCollisionPlanningError
 import random
 import openravepy
-
-
-        
 
 
 BASE_FRAME = '/map'
@@ -48,27 +45,27 @@ class Orhuman(object):
         self.starting_angle = dict()
         self.last_updated = rospy.get_rostime().secs 
         self.hum_goal_predic = hum_goal_predic
-        self.num_obj = 0
         if hum_goal_predic:     
             import re
+            self.nottouchedobj = []
             self.tsrviz = []   # needed in order to visualize tsr continuosly
             self.tsrmsg = self.tsrchain()
-            self.min_tsr = None            
+            self.min_tsr = None
+            
+            self.restartnode = False
             
             self.cube = openravepy.RaveCreateKinBody(env,'')
             self.cube.SetName('cube')
             self.cube.InitFromBoxes(numpy.array([[0,0,0,0.01,0.01,0.01]]),True) # set geometry as one box of extents 0.1, 0.2, 0.3
             self.cube.Enable(False)
-            env.AddKinBody(self.cube)   
-            
-            actual_planner = VectorFieldPlanner()
-            self.robot.planner = Sequence(actual_planner, TSRPlanner(delegate_planner=actual_planner))
+            env.AddKinBody(self.cube)  
             
             self.node_rh = rospy.Publisher(self.getFullTfName('rhand_pos'), Pose, queue_size=10)
             self.node_lh = rospy.Publisher(self.getFullTfName('lhand_pos'), Pose, queue_size=10)
             self.env_obj_pose = rospy.Publisher('/env_obj/pos', PoseArray, queue_size=10)
             self.env_obj_tsr = rospy.Publisher('/env_obj/tsr', PoseArrays, queue_size=10)
             self.robot_eep = rospy.Publisher('/herb/active_eep', Pose, queue_size=10)
+            self.restart = rospy.Publisher('/restart', Bool, queue_size=10)
             self.prob_goal = rospy.Subscriber('/skel/prob_goal_' + self.id, Float32MultiArray, 
                                               self.callback_color_obj, queue_size=10)
             self.rob_up_twist = rospy.Subscriber('/herb/next_eep', Float32MultiArray,
@@ -226,8 +223,7 @@ class Orhuman(object):
         pose.orientation.x = ee_quat[0]
         pose.orientation.y = ee_quat[1]
         pose.orientation.z = ee_quat[2]
-        pose.orientation.w = ee_quat[3]
-        
+        pose.orientation.w = ee_quat[3]        
         return pose   
        
     def publish_poses(self):  
@@ -239,65 +235,369 @@ class Orhuman(object):
 
     def publish_object_pos(self):
         poselist = PoseArray() 
-        num = 0
         for obj in self.body.GetEnv().GetBodies():
             for ref_name in REF_OBJ:                
                 if ref_name in obj.GetName():
-                #if ref_name == obj.GetName():
-                    num =+ 1
                     ee_body = obj.GetTransform()                    
                     block_pose = self.define_pose_from_eetransform(ee_body)
-                    #ee_quat = transformations.quaternion_from_matrix(ee_body)
-                    #block_pose=Pose()
-                    #block_pose.position.x = ee_body[0,3]
-                    #block_pose.position.y = ee_body[1,3]
-                    #block_pose.position.z = ee_body[2,3]
-                    #block_pose.orientation.x = ee_quat[0]
-                    #block_pose.orientation.y = ee_quat[1]
-                    #block_pose.orientation.z = ee_quat[2]
-                    #block_pose.orientation.w = ee_quat[3]
                     poselist.poses.append(block_pose)
                     break
         self.env_obj_pose.publish(poselist)
-        self.num_obj = num
     
     def tsrchain(self):
         tsrmsg = PoseArrays()
         tsrnb =  20 
         filter_options = openravepy.IkFilterOptions.CheckEnvCollisions #or 0 for no collision checks
+        
+        if len(self.nottouchedobj) == 0:
+            init_nottouchedobj = True
+        else:
+            init_nottouchedobj = False
+        
+        count = -1
         for obj in self.body.GetEnv().GetBodies():
             for ref_name in REF_OBJ:
                 if ref_name in obj.GetName():
+                    count += 1
+                    
                     if 'box' in ref_name:
                         tsr_list = self.robot.tsrlibrary(obj, 'stamp')
-                        print 'tsr_list', tsr_list
                     else:
                         tsr_list = self.robot.tsrlibrary(obj, 'grasp', push_distance=0.0)
-                        
+                    
+                    if init_nottouchedobj:
+                        self.nottouchedobj.append(True)
+                    
                     posar = PoseArray()
-                    tsr_chain_idx = random.randint(0, len(tsr_list) - 1)                  
-                    tsr_chain = tsr_list[tsr_chain_idx]                                           
-                    for idx in range(tsrnb):
-                        sample = tsr_chain.sample() 
-                        config = self.robot.GetActiveManipulator().FindIKSolution(sample, filter_options) # will return None if no config can be found
-                        if config is not None: 
-                            self.tsrviz.append(openravepy.misc.DrawAxes(self.env, sample, dist=0.15))
-                            pose = openravepy.poseFromMatrix(sample)
-                            quat, xyz = pose[0:4], pose[4:7]
-                            tsrpose = Pose()
-                            tsrpose.position.x = xyz[0]
-                            tsrpose.position.y = xyz[1]
-                            tsrpose.position.z = xyz[2]
-                            tsrpose.orientation.w = quat[0]
-                            tsrpose.orientation.x = quat[1]
-                            tsrpose.orientation.y = quat[2]
-                            tsrpose.orientation.z = quat[3]
-                            posar.poses.append(tsrpose)
+                    if self.nottouchedobj[count] == True:
+                        tsr_chain_idx = random.randint(0, len(tsr_list) - 1)                  
+                        tsr_chain = tsr_list[tsr_chain_idx]                                           
+                        for idx in range(tsrnb):
+                            sample = tsr_chain.sample() 
+                            config = self.robot.GetActiveManipulator().FindIKSolution(sample, filter_options) # will return None if no config can be found
+                            if config is not None: 
+                                self.tsrviz.append(openravepy.misc.DrawAxes(self.env, sample, dist=0.15))
+                                pose = openravepy.poseFromMatrix(sample)
+                                quat, xyz = pose[0:4], pose[4:7]
+                                tsrpose = Pose()
+                                tsrpose.position.x = xyz[0]
+                                tsrpose.position.y = xyz[1]
+                                tsrpose.position.z = xyz[2]
+                                tsrpose.orientation.w = quat[0]
+                                tsrpose.orientation.x = quat[1]
+                                tsrpose.orientation.y = quat[2]
+                                tsrpose.orientation.z = quat[3]
+                                posar.poses.append(tsrpose)
+                    else:
+                        tsrpose = Pose()
+                        tsrpose.position.x = -9999
+                        tsrpose.position.y = -9999
+                        tsrpose.position.z = -9999
+                        tsrpose.orientation.w = 1
+                        tsrpose.orientation.x = 0
+                        tsrpose.orientation.y = 0
+                        tsrpose.orientation.z = 0
+                        posar.poses.append(tsrpose)   
                     tsrmsg.poses.append(posar)   
                     break            
         return tsrmsg
 
-    #def topose(self, sample):       
+ 
+
+    
+    def publish_object_tsr(self):
+        self.env_obj_tsr.publish(self.tsrmsg)   #so that I can publish always same tsr poses
+
+       
+    def publish_robot_eep(self):       
+        robot_pose_ee = self.define_pose_from_eetransform(self.robot.GetActiveManipulator().GetEndEffectorTransform());       
+        self.robot_eep.publish(robot_pose_ee)
+     
+    def callback_color_obj(self, prob_goal_traj):
+        count_obj = 0     
+        if len(prob_goal_traj.data) > 0:
+            for obj in self.body.GetEnv().GetBodies():
+                for ref_name in REF_OBJ:                
+                    if ref_name in obj.GetName(): 
+                        if prob_goal_traj.data[count_obj] < 0.1:
+                            color = numpy.array([0.745, 0.745, 0.745]) #gray
+                        elif prob_goal_traj.data[count_obj] < 0.2:
+                            color = numpy.array([0.0, 1.0, 0.0]) #verde
+                        elif prob_goal_traj.data[count_obj] < 0.3:
+                            color = numpy.array([0.2, 0.8, 0.0]) #verde
+                        elif prob_goal_traj.data[count_obj] < 0.4:
+                            color = numpy.array([0.4, 0.7, 0.0]) #giallo
+                        elif prob_goal_traj.data[count_obj] < 0.5:
+                            color = numpy.array([0.5, 0.6, 0.0]) #giallo
+                        elif prob_goal_traj.data[count_obj] < 0.6:
+                            color = numpy.array([0.6, 0.5, 0.0]) #orange
+                        elif prob_goal_traj.data[count_obj] < 0.7:
+                            color = numpy.array([0.7, 0.4, 0.0]) #orange
+                        elif prob_goal_traj.data[count_obj] < 0.8:
+                            color = numpy.array([0.8, 0.3, 0.0]) #orange
+                        elif prob_goal_traj.data[count_obj] < 0.95:
+                            color = numpy.array([0.9, 0.2, 0.0]) #orange
+                        else:
+                            color = numpy.array([1.0, 0.0, 0.0]) #red
+                        with self.body.GetEnv():
+                            obj.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(color)
+                            obj.GetLinks()[0].GetGeometries()[0].SetAmbientColor(color)
+                        count_obj += 1
+                        break
+        #else:
+            #for obj in self.body.GetEnv().GetBodies():
+                #for ref_name in REF_OBJ:                
+                    #if ref_name in obj.GetName(): 
+                        #color = numpy.array([0.745, 0.745, 0.745]) #gray
+                        #obj.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(color)
+                        #obj.GetLinks()[0].GetGeometries()[0].SetAmbientColor(color)
+                        #count_obj += 1
+                        #break
+  
+    def callback_update_twist(self, rob_new_twist):  
+        #logger.info("entered callback_update_twist")
+        if (rob_new_twist.data[0] != -9999):   #the goal was not reached  
+            self.restartnode = False            
+            twist = numpy.array([rob_new_twist.data[0],
+                                rob_new_twist.data[1],
+                                rob_new_twist.data[2],
+                                rob_new_twist.data[3],
+                                rob_new_twist.data[4],
+                                rob_new_twist.data[5]])
+      
+            vlimits = self.robot.GetDOFVelocityLimits(self.robot.GetActiveDOFIndices())
+            
+            if self.min_tsr is None:
+                dqout, tout = util.ComputeJointVelocityFromTwist(self.robot, 
+                                                            twist, 
+                                                            joint_velocity_limits=vlimits,
+                                                            objective=util.quadraticPlusJointLimitObjective)
+            else:
+                with self.env:
+                    filter_options = openravepy.IkFilterOptions.CheckEnvCollisions #or 0 for no collision checks
+                    config = self.robot.GetActiveManipulator().FindIKSolution(self.min_tsr, filter_options) # will return None if no config can be found
+                #dqout, tout = util.ComputeJointVelocityFromTwist(self.robot, 
+                                                            #twist, 
+                                                            #joint_velocity_limits=vlimits,
+                                                            #objective=util.quadraticPlusJointLimitObjective)
+                dqout, tout = util.ComputeJointVelocityFromTwist(self.robot, 
+                                                                twist, 
+                                                                joint_velocity_limits=vlimits,                                                            
+                                                                objective=util.quadraticPlusJointConfObjective,
+                                                                q_target=config)
+          
+            # Go as fast as possible 
+            #dqout = min(abs(vlimits[i] / dqout[i]) if dqout[i] != 0. else 1. for i in xrange(vlimits.shape[0])) * dqout
+            #for i in xrange(vlimits.shape[0]): 
+                #if not abs(dqout[i]) < vlimits[i]:
+                    #dqout[i] =  (vlimits[i] - 0.0001)*numpy.sign(dqout[i]) 
+                    
+            ### Check collision.
+            #with self.env:
+                #with self.robot.CreateRobotStateSaver():
+                    #q = self.robot.GetActiveDOFValues()
+                    #self.robot.SetActiveDOFValues(q + (dqout/20))  #check on herb position in 1/20 sec 
+                    #report = openravepy.CollisionReport()
+                    #if self.env.CheckCollision(self.robot, report=report):
+                        #raise CollisionPlanningError.FromReport(report)
+                    #elif self.robot.CheckSelfCollision(report=report):
+                        #raise SelfCollisionPlanningError.FromReport(report)
+            
+            self.robot.right_arm.Servo(dqout) 
+        else:
+            #the robot touches the box
+            self.robot.right_arm.Servo(numpy.array([0., 0., 0., 0., 0., 0., 0.])) 
+            rospy.sleep(0.01) #to be sure the robot is not moving
+            
+            #TODO: valido only for the boxes
+            logging.info('Approching the object')
+            traj = VectorFieldPlanner().PlanToEndEffectorOffset(self.robot,
+                                                                numpy.array([0,0,-1]),
+                                                                0.06, #0.105 = 0.26(tsr)-0.04(box hieght)-0.01(cyl diplacement)-0.1(cyl hight)
+                                                                position_tolerance=0.03,
+                                                                angular_tolerance=0.15)  
+            if traj.GetNumWaypoints() > 0:
+                self.robot.ExecutePath(traj)
+            
+            #mark the stamped/graped object
+            values_prox = numpy.array([])
+            robee_pos = self.robot.GetActiveManipulator().GetEndEffectorTransform()[0:3,3]
+            for obj in self.body.GetEnv().GetBodies():
+                for ref_name in REF_OBJ:
+                    if ref_name in obj.GetName():
+                        obj_pos = obj.GetTransform()[0:3,3]                        
+                        error = obj_pos - robee_pos
+                        values_prox = numpy.append(values_prox, [numpy.dot(numpy.transpose(error), error)])  
+            self.nottouchedobj[numpy.argmin(values_prox)] = False
+            
+            logging.info('Deproaching the object')
+            traj = VectorFieldPlanner().PlanToEndEffectorOffset(self.robot,
+                                                                numpy.array([0,0,1]),
+                                                                0.06,
+                                                                position_tolerance=0.02,
+                                                                angular_tolerance=0.15)
+            if traj.GetNumWaypoints() > 0:
+                self.robot.ExecutePath(traj)                
+
+            self.tsrviz = []
+            self.tsrmsg = self.tsrchain()
+            rospy.sleep(0.1) #to be sure the new tsr is send 0.05>0.006
+            self.restartnode = True
+            rospy.sleep(0.1) #to be sure the new tsr is send 0.05>0.006
+            self.restartnode = False
+       
+         
+    def callback_update_min_tsr(self, new_min_tsr):
+        new_min_tsr = numpy.array([[new_min_tsr.data[0], new_min_tsr.data[1], new_min_tsr.data[2], new_min_tsr.data[3]],
+                                   [new_min_tsr.data[4], new_min_tsr.data[5], new_min_tsr.data[6], new_min_tsr.data[7]],
+                                   [new_min_tsr.data[8], new_min_tsr.data[9], new_min_tsr.data[10], new_min_tsr.data[11]],
+                                   [new_min_tsr.data[12], new_min_tsr.data[13], new_min_tsr.data[14], new_min_tsr.data[15]]])
+
+        #new_min_tsr_pos = numpy.array([new_min_tsr.data[4], new_min_tsr.data[8], new_min_tsr.data[12]])        
+        self.cube.SetTransform(new_min_tsr)
+        self.min_tsr = new_min_tsr
+           
+                    
+
+    def update(self, tf):
+        TIME_TO_WAIT = 1
+        time_since_last_update = rospy.get_rostime().secs - self.last_updated
+        if self.enabled and time_since_last_update > TIME_TO_WAIT:
+            self.hide()
+        elif not self.enabled and time_since_last_update <= TIME_TO_WAIT:
+            self.show()
+        
+        #Chest
+        person_transform = self.getSkeletonTransformation(tf, 'SpineBase')        
+        if person_transform is not None:           
+            #requied to have human standing 
+            #angle/axis rotation for the alignment of human y with world z
+            th = numpy.arccos(numpy.asscalar(numpy.dot(numpy.array([0.,0.,1.]).T, person_transform[0:3,1])))
+            nn_axis = numpy.cross(person_transform[0:3,1], [0.,0.,1.])
+            axis = nn_axis/numpy.linalg.norm(nn_axis)
+            a11 = numpy.cos(th) + numpy.square(axis[0])*(1 - numpy.cos(th))
+            a12 = axis[0]*axis[1]*(1 - numpy.cos(th)) - axis[2]*numpy.sin(th)
+            a13 = axis[0]*axis[2]*(1 - numpy.cos(th)) + axis[1]*numpy.sin(th)
+            a21 = axis[1]*axis[0]*(1 - numpy.cos(th)) + axis[2]*numpy.sin(th)
+            a22 = numpy.cos(th) + numpy.square(axis[1])*(1 - numpy.cos(th))
+            a23 = axis[1]*axis[2]*(1 - numpy.cos(th)) - axis[0]*numpy.sin(th)
+            a31 = axis[2]*axis[0]*(1 - numpy.cos(th)) - axis[1]*numpy.sin(th)
+            a32 = axis[2]*axis[1]*(1 - numpy.cos(th)) + axis[0]*numpy.sin(th)
+            a33 = numpy.cos(th) + numpy.square(axis[2])*(1 - numpy.cos(th))
+            matrix_rot = numpy.array([[a11, a12 ,a13],
+                                        [a21, a22, a23],
+                                        [a31, a32, a33]])
+            
+            person_position_transform_rot = numpy.dot(matrix_rot, person_transform[0:3,0:3])
+            person_position_transform = numpy.zeros((4, 4))
+            person_position_transform[0:3,0:3] = person_position_transform_rot
+            person_position_transform[0:4,3] = person_transform[0:4,3]
+            person_position_transform[2,3] = 0.85
+            self.body.SetTransform(person_position_transform)
+
+        
+        ##Left arm
+        ul_angles = self.getUpperLimbAngles(tf, 'L')
+        self.checkLimits(self.body.GetJoint('JLShoulder'), ul_angles, 0)
+        self.checkLimits(self.body.GetJoint('JLShoulder2'), ul_angles, 1)
+        self.checkLimits(self.body.GetJoint('JLShoulder3'), ul_angles, 2)
+        self.checkLimits(self.body.GetJoint('JLForearm'), ul_angles, 3)
+
+        #Right arm
+        ul_angles = self.getUpperLimbAngles(tf, 'R')
+        self.checkLimits(self.body.GetJoint('JRShoulder'), ul_angles, 0)
+        self.checkLimits(self.body.GetJoint('JRShoulder2'), ul_angles, 1)
+        self.checkLimits(self.body.GetJoint('JRShoulder3'), ul_angles, 2)        
+        self.checkLimits(self.body.GetJoint('JRForearm' ), ul_angles, 3)
+            
+        #Left leg
+        ul_angles = self.getLowerLimbAngles(tf, 'L')
+        self.checkLimits(self.body.GetJoint('JLThigh'), ul_angles, 0)
+        self.checkLimits(self.body.GetJoint('JLCalf'), ul_angles, 1)
+
+        #Right leg
+        ul_angles = self.getLowerLimbAngles(tf, 'R')
+        self.checkLimits(self.body.GetJoint('JRThigh'), ul_angles, 0)
+        self.checkLimits(self.body.GetJoint('JRCalf'), ul_angles, 1)
+        
+        #TODO; head, neck  
+        
+        if self.hum_goal_predic and self.enabled:  
+            self.publish_object_tsr()
+            self.publish_object_pos()
+            self.publish_poses()  
+            self.publish_robot_eep() 
+            self.restart.publish(self.restartnode) 
+            self.rate.sleep()
+
+
+def humanInList(human, ids):
+    for id in ids:
+        if human.id == 'user_' + id: return True
+    return False
+        
+def addRemoveHumans(tf, humans, env, hum_goal_predic=False):
+    import re
+    matcher = re.compile('.*user_(\\d+).*')    
+    all_tfs = tf.getFrameStrings()
+    all_human_ids = []
+    for frame_name in all_tfs:
+        match = matcher.match(frame_name)
+        if match is not None:
+            all_human_ids.append(match.groups()[0])
+
+    # removing
+    humans_to_remove = [x for x in humans if not humanInList(x, all_human_ids)]
+    for human in humans_to_remove:
+        env.RemoveKinBody(human);
+        human.destroy()
+        humans.remove(human)
+        
+    # adding
+    for id in all_human_ids:
+        found = False
+        for human in humans:
+            if human.id == 'user_' + id:
+                found = True
+                break
+        if not found:
+            humans.append(Orhuman('user_' + id, env, hum_goal_predic))
+
+
+
+
+
+
+
+
+        
+    #def callback_update_obj_reached(self, reached):
+        #self.obj_reached = reached
+
+  
+    #def callback_update_pos(self, rob_new_pos):
+        #quat = numpy.array([rob_new_pos.orientation.x, 
+                            #rob_new_pos.orientation.y, 
+                            #rob_new_pos.orientation.z, 
+                            #rob_new_pos.orientation.w])       
+        #r = transformations.quaternion_matrix(quat)
+        #pose_in_world = transformations.identity_matrix()
+        #pose_in_world[0:4,0:4] = r
+        #pose_in_world[0:3, 3] = numpy.array([rob_new_pos.position.x, 
+                                 #rob_new_pos.position.y,
+                                 #rob_new_pos.position.z])
+        
+        ##filter_options = openravepy.IkFilterOptions.CheckEnvCollisions #or 0 for no collision checks
+        #config = self.robot.GetActiveManipulator().FindIKSolution(pose_in_world, self.filter_options) # will return None if no config can be found
+        #traj = planner.PlanToConfiguration(robot, config, execute=True)    
+        ##if traj.GetNumWaypoints() > 0:
+            ##traj = robot.ExecutePath(traj)
+
+
+
+
+
+   #def topose(self, sample):       
         #pose = openravepy.poseFromMatrix(sample)
         #quat, xyz = pose[0:4], pose[4:7]
         #tsrpose = Pose()
@@ -379,242 +679,3 @@ class Orhuman(object):
         #tsrmsg.poses.append(posar2)   
         
         #return tsrmsg
-
-    
-    def publish_object_tsr(self):
-        self.env_obj_tsr.publish(self.tsrmsg)   #so that I can publish always same tsr poses
-
-       
-    def publish_robot_eep(self):       
-        robot_pose_ee = self.define_pose_from_eetransform(self.robot.GetActiveManipulator().GetEndEffectorTransform());       
-        self.robot_eep.publish(robot_pose_ee)
-     
-    def callback_color_obj(self, prob_goal_traj):
-        count_obj = 0     
-        if len(prob_goal_traj.data) > 0:
-            for obj in self.body.GetEnv().GetBodies():
-                for ref_name in REF_OBJ:                
-                    if ref_name in obj.GetName(): #and count_obj < self.num_obj:
-                    #if ref_name == obj.GetName():
-                        if prob_goal_traj.data[count_obj] < 0.1:
-                            color = numpy.array([0.745, 0.745, 0.745]) #gray
-                        elif prob_goal_traj.data[count_obj] < 0.2:
-                            color = numpy.array([0.0, 1.0, 0.0]) #verde
-                        elif prob_goal_traj.data[count_obj] < 0.3:
-                            color = numpy.array([0.2, 0.8, 0.0]) #verde
-                        elif prob_goal_traj.data[count_obj] < 0.4:
-                            color = numpy.array([0.4, 0.7, 0.0]) #giallo
-                        elif prob_goal_traj.data[count_obj] < 0.5:
-                            color = numpy.array([0.5, 0.6, 0.0]) #giallo
-                        elif prob_goal_traj.data[count_obj] < 0.6:
-                            color = numpy.array([0.6, 0.5, 0.0]) #orange
-                        elif prob_goal_traj.data[count_obj] < 0.7:
-                            color = numpy.array([0.7, 0.4, 0.0]) #orange
-                        elif prob_goal_traj.data[count_obj] < 0.8:
-                            color = numpy.array([0.8, 0.3, 0.0]) #orange
-                        elif prob_goal_traj.data[count_obj] < 0.95:
-                            color = numpy.array([0.9, 0.2, 0.0]) #orange
-                        else:
-                            color = numpy.array([1.0, 0.0, 0.0]) #red
-                        with self.body.GetEnv():
-                            obj.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(color)
-                            obj.GetLinks()[0].GetGeometries()[0].SetAmbientColor(color)
-                        count_obj += 1
-                        break
-        #else:
-            #for obj in self.body.GetEnv().GetBodies():
-                #for ref_name in REF_OBJ:                
-                    #if ref_name in obj.GetName(): 
-                        #color = numpy.array([0.745, 0.745, 0.745]) #gray
-                        #obj.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(color)
-                        #obj.GetLinks()[0].GetGeometries()[0].SetAmbientColor(color)
-                        #count_obj += 1
-                        #break
-  
-    def callback_update_twist(self, rob_new_twist):  
-        #logger.info("entered callback_update_twist")
-        twist = numpy.array([rob_new_twist.data[0],
-                             rob_new_twist.data[1],
-                             rob_new_twist.data[2],
-                             rob_new_twist.data[3],
-                             rob_new_twist.data[4],
-                             rob_new_twist.data[5]])
-        
-        vlimits = self.robot.GetDOFVelocityLimits(self.robot.GetActiveDOFIndices())
-        
-        
-        
-        if self.min_tsr is None:
-            dqout, tout = util.ComputeJointVelocityFromTwist(self.robot, 
-                                                         twist, 
-                                                         joint_velocity_limits=vlimits,
-                                                         objective=util.quadraticPlusJointLimitObjective)
-        else:
-            with self.env:
-                filter_options = openravepy.IkFilterOptions.CheckEnvCollisions #or 0 for no collision checks
-                config = self.robot.GetActiveManipulator().FindIKSolution(self.min_tsr, filter_options) # will return None if no config can be found
-                #print 'config', config
-            dqout, tout = util.ComputeJointVelocityFromTwist(self.robot, 
-                                                            twist, 
-                                                            joint_velocity_limits=vlimits,                                                            
-                                                            objective=util.quadraticPlusJointConfObjective,
-                                                            q_target=config)
-
-        
-        # Go as fast as possible 
-        #dqout = min(abs(vlimits[i] / dqout[i]) if dqout[i] != 0. else 1. for i in xrange(vlimits.shape[0])) * dqout
-        #for i in xrange(vlimits.shape[0]): 
-            #if not abs(dqout[i]) < vlimits[i]:
-                #dqout[i] =  (vlimits[i] - 0.0001)*numpy.sign(dqout[i]) 
-                
-        ## Check collision.
-        #with self.env:
-            #with self.robot.CreateRobotStateSaver():
-                #q = self.robot.GetActiveDOFValues()
-                #self.robot.SetActiveDOFValues(q + (dqout/20))  #check on herb position in 1/20 sec 
-                #report = openravepy.CollisionReport()
-                #if self.env.CheckCollision(self.robot, report=report):
-                    #raise CollisionPlanningError.FromReport(report)
-                #elif self.robot.CheckSelfCollision(report=report):
-                    #raise SelfCollisionPlanningError.FromReport(report)
-        
-        self.robot.right_arm.Servo(dqout) 
-         
-         
-    def callback_update_min_tsr(self, new_min_tsr):
-        new_min_tsr = numpy.array([[new_min_tsr.data[0], new_min_tsr.data[1], new_min_tsr.data[2], new_min_tsr.data[3]],
-                                   [new_min_tsr.data[4], new_min_tsr.data[5], new_min_tsr.data[6], new_min_tsr.data[7]],
-                                   [new_min_tsr.data[8], new_min_tsr.data[9], new_min_tsr.data[10], new_min_tsr.data[11]],
-                                   [new_min_tsr.data[12], new_min_tsr.data[13], new_min_tsr.data[14], new_min_tsr.data[15]]])
-
-        #new_min_tsr_pos = numpy.array([new_min_tsr.data[4], new_min_tsr.data[8], new_min_tsr.data[12]])        
-        self.cube.SetTransform(new_min_tsr)
-        self.min_tsr = new_min_tsr
-
-  
-    #def callback_update_pos(self, rob_new_pos):
-        #quat = numpy.array([rob_new_pos.orientation.x, 
-                            #rob_new_pos.orientation.y, 
-                            #rob_new_pos.orientation.z, 
-                            #rob_new_pos.orientation.w])       
-        #r = transformations.quaternion_matrix(quat)
-        #pose_in_world = transformations.identity_matrix()
-        #pose_in_world[0:4,0:4] = r
-        #pose_in_world[0:3, 3] = numpy.array([rob_new_pos.position.x, 
-                                 #rob_new_pos.position.y,
-                                 #rob_new_pos.position.z])
-        
-        ##filter_options = openravepy.IkFilterOptions.CheckEnvCollisions #or 0 for no collision checks
-        #config = self.robot.GetActiveManipulator().FindIKSolution(pose_in_world, self.filter_options) # will return None if no config can be found
-        #traj = planner.PlanToConfiguration(robot, config, execute=True)    
-        ##if traj.GetNumWaypoints() > 0:
-            ##traj = robot.ExecutePath(traj)
-            
-                    
-
-    def update(self, tf):
-        TIME_TO_WAIT = 1
-        time_since_last_update = rospy.get_rostime().secs - self.last_updated
-        if self.enabled and time_since_last_update > TIME_TO_WAIT:
-            self.hide()
-        elif not self.enabled and time_since_last_update <= TIME_TO_WAIT:
-            self.show()
-        
-        #Chest
-        person_transform = self.getSkeletonTransformation(tf, 'SpineBase')        
-        if person_transform is not None:           
-            #requied to have human standing 
-            #angle/axis rotation for the alignment of human y with world z
-            th = numpy.arccos(numpy.asscalar(numpy.dot(numpy.array([0.,0.,1.]).T, person_transform[0:3,1])))
-            nn_axis = numpy.cross(person_transform[0:3,1], [0.,0.,1.])
-            axis = nn_axis/numpy.linalg.norm(nn_axis)
-            a11 = numpy.cos(th) + numpy.square(axis[0])*(1 - numpy.cos(th))
-            a12 = axis[0]*axis[1]*(1 - numpy.cos(th)) - axis[2]*numpy.sin(th)
-            a13 = axis[0]*axis[2]*(1 - numpy.cos(th)) + axis[1]*numpy.sin(th)
-            a21 = axis[1]*axis[0]*(1 - numpy.cos(th)) + axis[2]*numpy.sin(th)
-            a22 = numpy.cos(th) + numpy.square(axis[1])*(1 - numpy.cos(th))
-            a23 = axis[1]*axis[2]*(1 - numpy.cos(th)) - axis[0]*numpy.sin(th)
-            a31 = axis[2]*axis[0]*(1 - numpy.cos(th)) - axis[1]*numpy.sin(th)
-            a32 = axis[2]*axis[1]*(1 - numpy.cos(th)) + axis[0]*numpy.sin(th)
-            a33 = numpy.cos(th) + numpy.square(axis[2])*(1 - numpy.cos(th))
-            matrix_rot = numpy.array([[a11, a12 ,a13],
-                                        [a21, a22, a23],
-                                        [a31, a32, a33]])
-            
-            person_position_transform_rot = numpy.dot(matrix_rot, person_transform[0:3,0:3])
-            person_position_transform = numpy.zeros((4, 4))
-            person_position_transform[0:3,0:3] = person_position_transform_rot
-            person_position_transform[0:4,3] = person_transform[0:4,3]
-            person_position_transform[2,3] = 0.85
-            self.body.SetTransform(person_position_transform)
-
-        
-        ##Left arm
-        ul_angles = self.getUpperLimbAngles(tf, 'L')
-        self.checkLimits(self.body.GetJoint('JLShoulder'), ul_angles, 0)
-        self.checkLimits(self.body.GetJoint('JLShoulder2'), ul_angles, 1)
-        self.checkLimits(self.body.GetJoint('JLShoulder3'), ul_angles, 2)
-        self.checkLimits(self.body.GetJoint('JLForearm'), ul_angles, 3)
-
-        #Right arm
-        ul_angles = self.getUpperLimbAngles(tf, 'R')
-        self.checkLimits(self.body.GetJoint('JRShoulder'), ul_angles, 0)
-        self.checkLimits(self.body.GetJoint('JRShoulder2'), ul_angles, 1)
-        self.checkLimits(self.body.GetJoint('JRShoulder3'), ul_angles, 2)        
-        self.checkLimits(self.body.GetJoint('JRForearm' ), ul_angles, 3)
-            
-        #Left leg
-        ul_angles = self.getLowerLimbAngles(tf, 'L')
-        self.checkLimits(self.body.GetJoint('JLThigh'), ul_angles, 0)
-        self.checkLimits(self.body.GetJoint('JLCalf'), ul_angles, 1)
-
-        #Right leg
-        ul_angles = self.getLowerLimbAngles(tf, 'R')
-        self.checkLimits(self.body.GetJoint('JRThigh'), ul_angles, 0)
-        self.checkLimits(self.body.GetJoint('JRCalf'), ul_angles, 1)
-        
-        #TODO; head, neck  
-        
-        if self.hum_goal_predic and self.enabled:  
-            self.publish_object_tsr()
-            self.publish_object_pos()
-            self.publish_poses()  
-            self.publish_robot_eep()            
-            self.rate.sleep()
-
-
-def humanInList(human, ids):
-    for id in ids:
-        if human.id == 'user_' + id: return True
-    return False
-        
-def addRemoveHumans(tf, humans, env, hum_goal_predic=False):
-    import re
-    matcher = re.compile('.*user_(\\d+).*')    
-    all_tfs = tf.getFrameStrings()
-    all_human_ids = []
-    for frame_name in all_tfs:
-        match = matcher.match(frame_name)
-        if match is not None:
-            all_human_ids.append(match.groups()[0])
-
-    # removing
-    humans_to_remove = [x for x in humans if not humanInList(x, all_human_ids)]
-    for human in humans_to_remove:
-        env.RemoveKinBody(human);
-        human.destroy()
-        humans.remove(human)
-        
-    # adding
-    for id in all_human_ids:
-        found = False
-        for human in humans:
-            if human.id == 'user_' + id:
-                found = True
-                break
-        if not found:
-            humans.append(Orhuman('user_' + id, env, hum_goal_predic))
-
-
-
-

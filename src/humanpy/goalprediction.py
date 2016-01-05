@@ -9,7 +9,7 @@ import numpy
 import time
 import copy
 from geometry_msgs.msg import Pose, PoseArray
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float32MultiArray, Bool
 
 
 
@@ -67,6 +67,21 @@ class goal_prediction():
                           #obj_poses.poses[i].orientation.w])
             self.ee_pos_gs.append(currpos)
         
+    def callback_restart(self, restart_value):
+        """
+        read object/goal positions 
+        @param obj_poses - list of objects/goal
+        """        
+        if restart_value.data == True:
+            print self.cost_ee_pos_s_ee_pos_u
+            self.cost_ee_pos_s_ee_pos_u = 0 
+            self.ee_pos_gs = []  #list of array of lenght 3 (1 array for each goal)
+            self.prob_tg_prob_g = []  #[num_goal]
+            self.ee_pos_u_init = True
+            self.ee_pos_s = numpy.zeros(3)
+            self.ee_pos_up = numpy.zeros(3)
+
+            
     def callback_user(self, hand_pose):
         """
         read human hand pose, evaluate the probability on goal and publishes the probability vector 
@@ -136,7 +151,8 @@ class goal_prediction():
         initialiazes two subscriber and the probability evluation
         """ 
         rospy.Subscriber('/env_obj/pos', PoseArray, self.callback_env_obj_pose)         
-        rospy.Subscriber(self.sub_id, Pose, self.callback_user)                    
+        rospy.Subscriber(self.sub_id, Pose, self.callback_user)    
+        rospy.Subscriber('/restart', Bool, self.callback_restart)         
         rospy.spin()
         
 
