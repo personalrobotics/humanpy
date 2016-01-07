@@ -21,9 +21,9 @@ if __name__ == "__main__":
     
     
     indices, values = herb.configurations.get_configuration('relaxed_home') # Faster for testing
-    #values[7:14] = numpy.array([-0.2, 1.60, 2.0,  2.0222084,  
-    #                            1.0, 0.0, 0.0])
-    values[7:14] = numpy.array([numpy.pi/2, 1.30, -2.9, 1.92, 0.0, 0.0, 0.0])
+    values[7:14] = numpy.array([-0.2, 1.60, 2.0,  2.0222084,  
+                                1.0, 0.0, 0.0])
+    #values[7:14] = numpy.array([numpy.pi/2, 1.30, -2.9, 1.92, 0.0, 0.0, 0.0])
     herb.SetDOFValues(values=values, dofindices=indices)  
     
     herb.right_arm.SetActive()   

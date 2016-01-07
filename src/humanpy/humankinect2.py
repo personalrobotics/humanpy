@@ -3,6 +3,7 @@ import numpy
 import rospy
 import rospkg
 import logging
+import copy
 import collections
 from geometry_msgs.msg import Pose, PoseArray
 from std_msgs.msg import Float32MultiArray, Bool
@@ -30,6 +31,8 @@ REF_OBJ = ['glass1','glass2','glass3','box1','box2','box3']
 logger = logging.getLogger('humanpy')
 logger.setLevel(logging.INFO)
 
+import os
+f = open('/home/spelle/ros_ws/myfile.txt','w')
 
 
 class Orhuman(object):
@@ -47,12 +50,13 @@ class Orhuman(object):
         self.hum_goal_predic = hum_goal_predic
         if hum_goal_predic:     
             import re
+            self.tsr_box_distance = 0.06
             self.nottouchedobj = []
             self.tsrviz = []   # needed in order to visualize tsr continuosly
             self.tsrmsg = self.tsrchain()
             self.min_tsr = None
             
-            self.restartnode = False
+            self.restartnode = False            
             
             self.cube = openravepy.RaveCreateKinBody(env,'')
             self.cube.SetName('cube')
@@ -274,8 +278,24 @@ class Orhuman(object):
                         tsr_chain = tsr_list[tsr_chain_idx]                                           
                         for idx in range(tsrnb):
                             sample = tsr_chain.sample() 
-                            config = self.robot.GetActiveManipulator().FindIKSolution(sample, filter_options) # will return None if no config can be found
-                            if config is not None: 
+                            config_tsr = self.robot.GetActiveManipulator().FindIKSolution(sample, filter_options) # will return None if no config can be found
+                            sample_stamp = copy.deepcopy(sample)
+                            sample_stamp[2,3] -= self.tsr_box_distance
+                            config_stamp = self.robot.GetActiveManipulator().FindIKSolution(sample_stamp, filter_options)                            
+                            
+                            #prova = self.robot.GetActiveManipulator().FindIKSolutions(sample, filter_options)  
+                            #prova2 = self.robot.GetActiveManipulator().FindIKSolutions(sample_stamp, filter_options)
+                            
+                            #f.write('---------------1---------------' + os.linesep)
+                            #f.write(str(prova))
+                            #f.write('---------------2---------------' + os.linesep)
+                            #f.write(str(prova2))
+                              
+                            
+                            ##print '----------------'
+                            #print prova 
+                            
+                            if config_tsr is not None and config_stamp is not None: 
                                 self.tsrviz.append(openravepy.misc.DrawAxes(self.env, sample, dist=0.15))
                                 pose = openravepy.poseFromMatrix(sample)
                                 quat, xyz = pose[0:4], pose[4:7]
@@ -413,8 +433,8 @@ class Orhuman(object):
             logging.info('Approching the object')
             traj = VectorFieldPlanner().PlanToEndEffectorOffset(self.robot,
                                                                 numpy.array([0,0,-1]),
-                                                                0.06, #0.105 = 0.26(tsr)-0.04(box hieght)-0.01(cyl diplacement)-0.1(cyl hight)
-                                                                position_tolerance=0.03,
+                                                                self.tsr_box_distance, #0.105 = 0.26(tsr)-0.04(box hieght)-0.01(cyl diplacement)-0.1(cyl hight)
+                                                                position_tolerance=0.04,
                                                                 angular_tolerance=0.15)  
             if traj.GetNumWaypoints() > 0:
                 self.robot.ExecutePath(traj)
@@ -433,8 +453,8 @@ class Orhuman(object):
             logging.info('Deproaching the object')
             traj = VectorFieldPlanner().PlanToEndEffectorOffset(self.robot,
                                                                 numpy.array([0,0,1]),
-                                                                0.06,
-                                                                position_tolerance=0.02,
+                                                                self.tsr_box_distance,
+                                                                position_tolerance=0.04,
                                                                 angular_tolerance=0.15)
             if traj.GetNumWaypoints() > 0:
                 self.robot.ExecutePath(traj)                
