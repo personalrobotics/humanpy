@@ -31,8 +31,8 @@ REF_OBJ = ['glass1','glass2','glass3','box1','box2','box3']
 logger = logging.getLogger('humanpy')
 logger.setLevel(logging.INFO)
 
-import os
-f = open('/home/spelle/ros_ws/myfile.txt','w')
+#import os
+#f = open('/home/spelle/ros_ws/myfile.txt','w')
 
 
 class Orhuman(object):
