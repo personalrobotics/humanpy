@@ -58,11 +58,17 @@ class Orhuman(object):
             
             self.restartnode = False            
             
-            self.cube = openravepy.RaveCreateKinBody(env,'')
-            self.cube.SetName('cube')
-            self.cube.InitFromBoxes(numpy.array([[0,0,0,0.01,0.01,0.01]]),True) # set geometry as one box of extents 0.1, 0.2, 0.3
-            self.cube.Enable(False)
-            env.AddKinBody(self.cube)  
+            cubeexist = False
+            for i in env.GetBodies():
+                if i.GetName == 'cube' + str(id):
+                    cubeexist = True
+                    break
+            if cubeexist == False:
+                self.cube = openravepy.RaveCreateKinBody(env,'')
+                self.cube.SetName('cube' + str(id))
+                self.cube.InitFromBoxes(numpy.array([[0,0,0,0.01,0.01,0.01]]),True) # set geometry as one box of extents 0.1, 0.2, 0.3
+                self.cube.Enable(False)
+                env.AddKinBody(self.cube)  
             
             self.node_rh = rospy.Publisher(self.getFullTfName('rhand_pos'), Pose, queue_size=10)
             self.node_lh = rospy.Publisher(self.getFullTfName('lhand_pos'), Pose, queue_size=10)
@@ -396,15 +402,15 @@ class Orhuman(object):
                 with self.env:
                     filter_options = openravepy.IkFilterOptions.CheckEnvCollisions #or 0 for no collision checks
                     config = self.robot.GetActiveManipulator().FindIKSolution(self.min_tsr, filter_options) # will return None if no config can be found
-                #dqout, tout = util.ComputeJointVelocityFromTwist(self.robot, 
-                                                            #twist, 
-                                                            #joint_velocity_limits=vlimits,
-                                                            #objective=util.quadraticPlusJointLimitObjective)
                 dqout, tout = util.ComputeJointVelocityFromTwist(self.robot, 
-                                                                twist, 
-                                                                joint_velocity_limits=vlimits,                                                            
-                                                                objective=util.quadraticPlusJointConfObjective,
-                                                                q_target=config)
+                                                            twist, 
+                                                            joint_velocity_limits=vlimits,
+                                                            objective=util.quadraticPlusJointLimitObjective)
+                #dqout, tout = util.ComputeJointVelocityFromTwist(self.robot, 
+                                                                #twist, 
+                                                                #joint_velocity_limits=vlimits,                                                            
+                                                                #objective=util.quadraticPlusJointConfObjective,
+                                                                #q_target=config)
           
             # Go as fast as possible 
             #dqout = min(abs(vlimits[i] / dqout[i]) if dqout[i] != 0. else 1. for i in xrange(vlimits.shape[0])) * dqout
@@ -413,15 +419,15 @@ class Orhuman(object):
                     #dqout[i] =  (vlimits[i] - 0.0001)*numpy.sign(dqout[i]) 
                     
             ### Check collision.
-            #with self.env:
-                #with self.robot.CreateRobotStateSaver():
-                    #q = self.robot.GetActiveDOFValues()
-                    #self.robot.SetActiveDOFValues(q + (dqout/20))  #check on herb position in 1/20 sec 
-                    #report = openravepy.CollisionReport()
-                    #if self.env.CheckCollision(self.robot, report=report):
-                        #raise CollisionPlanningError.FromReport(report)
-                    #elif self.robot.CheckSelfCollision(report=report):
-                        #raise SelfCollisionPlanningError.FromReport(report)
+            with self.env:
+                with self.robot.CreateRobotStateSaver():
+                    q = self.robot.GetActiveDOFValues()
+                    self.robot.SetActiveDOFValues(q + (dqout/20))  #check on herb position in 1/20 sec 
+                    report = openravepy.CollisionReport()
+                    if self.env.CheckCollision(self.robot, report=report):
+                        raise CollisionPlanningError.FromReport(report)
+                    elif self.robot.CheckSelfCollision(report=report):
+                        raise SelfCollisionPlanningError.FromReport(report)
             
             self.robot.right_arm.Servo(dqout) 
         else:

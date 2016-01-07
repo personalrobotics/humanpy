@@ -37,7 +37,8 @@ def initialize(attach_viewer = False, sim = True, user_id = 'human', env = None)
 
     #Setup Manipulators
     with env:
-        robot = env.ReadKinBodyXMLFile('/home/herb_home/shared/stefania_ws/src/humanpy/dae/dae/man1.dae')
+        robot = env.ReadKinBodyXMLFile('/home/herb_home/shared/stefania_ws/src/humanpy/ordata/dae/man1.dae')
+        #robot = env.ReadKinBodyXMLFile('robots/man1.zae')
         robot.SetName(user_id)              #needed in order to have different humans in the same env
         env.AddKinBody(robot)        
 

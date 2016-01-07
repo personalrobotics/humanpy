@@ -3,7 +3,7 @@
     <param name="use_sim_time" value="true" />  
     <param name="/global_user" value="0" type="str"/>     
    
-    <node name="human_env" pkg="humanpy" type="humkinect2.py" respawn="false" output="screen"/>
+    <node name="human_env" pkg="humanpy" type="humkinect2_grasp.py" respawn="false" output="screen"/>
     <include file="$(find humanpy)/launch/humprediction.launch"/>       
     <include file="$(find concurrent_policy)/launch/pompds.launch"/>   
     

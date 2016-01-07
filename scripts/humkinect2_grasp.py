@@ -17,7 +17,8 @@ if __name__ == "__main__":
     logger.setLevel(logging.INFO)
 
     #env, herb = herbpy.initialize(attach_viewer=True, sim=True) 
-    env, herb = herbpy.initialize(attach_viewer='InteractiveMarker', sim=True) 
+    #env, herb = herbpy.initialize(attach_viewer='InteractiveMarker', sim=True) 
+    env, herb = herbpy.initialize(attach_viewer='rviz', sim=True) 
     
     
     indices, values = herb.configurations.get_configuration('relaxed_home') # Faster for testing
