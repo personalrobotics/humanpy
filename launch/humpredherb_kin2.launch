@@ -1,0 +1,81 @@
+<launch>    
+    <arg name="test1" default="False"/>
+    <arg name="test2" default="False"/>
+    <arg name="test3" default="False"/>
+    <arg name="hand" default="R"/>
+    <arg name="bagfile" default="False"/>
+    <arg name="kin" default="True"/>
+    <arg name="herb_sim" default="False"/>
+    
+    
+    <group if="$(arg bagfile)"> 
+        <param name="use_sim_time" value="true" />  
+        <node pkg="rosbag" type="play" name="playert" output="screen" args="--hz=200 -q --duration=35 --delay=1 --clock /homes/spelle/ros_test_ws/bag/stamp/test1.bag"/>
+    </group>
+    
+    
+    <!--TEST1: PREDEFINED SEQUENCE -->
+    <group if="$(arg test1)">    
+        <node name="human_env_t1" pkg="humanpy" type="humherb_stamp.py" respawn="false" output="screen">
+            <param name="herb_sim" value="$(arg herb_sim)"/>  
+            <param name="bagfile" value="$(arg bagfile)" type="bool"/>  
+        </node>
+    </group>   
+    
+    
+    <!--TEST2: CLOSEST OBJ -->
+    <group if="$(arg test2)"> 
+        <param name="/global_user" value="0" type="str"/>
+        
+        <group if="$(arg kin)"> 
+            <include file="$(find k2_client_vis)/launch/k2_client_vis.launch"/>
+        </group>  
+        
+        <node name="human_env" pkg="humanpy" type="humherb_kin2.py" respawn="false" output="screen">
+            <param name="herb_sim" value="$(arg herb_sim)" />  
+            <param name="bagfile" value="$(arg bagfile)" /> 
+        </node>
+        
+        <node name="hum_goal_prediction" pkg="humanpy" type="humpred.py" respawn="false" output="screen">
+            <param name="user_hand" value="$(arg hand)"/>
+        </node>
+        
+        <node name="robotpathgeneration" pkg="concurrent_policy" type="robotpathgeneration" respawn="true" output="screen">
+            <param name="leastprob_isactive" value="false" type="bool"/>  
+        </node>
+    </group>     
+    
+    <!--TEST3: CLOSEST OBJ -->
+    <group if="$(arg test3)">      
+        <param name="/global_user" value="0" type="str"/> 
+        
+        <group if="$(arg kin)"> 
+            <include file="$(find k2_client_vis)/launch/k2_client_vis.launch"/>
+        </group>  
+        
+        <node name="human_env_t3" pkg="humanpy" type="humherb_kin2.py" respawn="false" output="screen">
+            <param name="herb_sim" value="$(arg herb_sim)"/>  
+            <param name="bagfile" value="$(arg bagfile)" type="bool"/>  
+        </node>
+        
+        <node name="hum_goal_prediction_t3" pkg="humanpy" type="humpred.py" respawn="false" output="screen">
+            <param name="user_hand" value="$(arg hand)"/>
+        </node>
+        
+        <node name="robotpathgeneration_t3" pkg="concurrent_policy" type="robotpathgeneration" respawn="true" output="screen">
+            <param name="leastprob_isactive" value="true" type="bool"/>  
+        </node>
+    </group>  
+</launch>
+
+
+
+
+<!--include file="$(find humanpy)/launch/humherb_kin2.launch">
+<param name="herb_sim" value="False" />  
+<param name="bagfile" value="False" /> 
+</include-->
+
+<!--include file="$(find humanpy)/launch/humpred.launch"/-->       
+<!--include file="$(find concurrent_policy)/launch/pompds.launch"/-->  
+<!--include file="$(find concurrent_policy)/launch/pompds2.launch"/--> 

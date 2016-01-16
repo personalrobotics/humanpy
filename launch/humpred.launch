@@ -1,0 +1,6 @@
+<launch>
+    <node name="hum_goal_prediction" pkg="humanpy" type="humpred.py" respawn="false" output="screen">
+        <param name="user_hand" value="R"/>
+    </node>
+</launch>
+

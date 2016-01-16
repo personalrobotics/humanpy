@@ -8,6 +8,7 @@ import logging
 import numpy
 import time
 import copy
+import threading
 from geometry_msgs.msg import Pose, PoseArray
 from std_msgs.msg import Float32MultiArray, Bool
 
@@ -15,7 +16,7 @@ from std_msgs.msg import Float32MultiArray, Bool
 
 logger = logging.getLogger('goalprediction')
 logger.setLevel(logging.INFO)
-W = 6#2.5
+W = 2.5  #6
 
 
 #import os
@@ -24,6 +25,7 @@ W = 6#2.5
 
 class goal_prediction():
     def __init__(self,user_id, user_hand):
+        self.lock = threading.Lock()
         self.user_hand = user_hand
         self.user_id = user_id
         self.cost_ee_pos_s_ee_pos_u = 0 
@@ -66,6 +68,16 @@ class goal_prediction():
                           #obj_poses.poses[i].orientation.z, 
                           #obj_poses.poses[i].orientation.w])
             self.ee_pos_gs.append(currpos)
+      
+    def restart(self):
+        self.lock.acquire()
+        self.cost_ee_pos_s_ee_pos_u = 0 
+        self.ee_pos_gs = []  #list of array of lenght 3 (1 array for each goal)
+        self.prob_tg_prob_g = []  #[num_goal]
+        self.ee_pos_u_init = True
+        self.ee_pos_s = numpy.zeros(3)
+        self.ee_pos_up = numpy.zeros(3)
+        self.lock.release()
         
     def callback_restart(self, restart_value):
         """
@@ -73,13 +85,8 @@ class goal_prediction():
         @param obj_poses - list of objects/goal
         """        
         if restart_value.data == True:
-            print self.cost_ee_pos_s_ee_pos_u
-            self.cost_ee_pos_s_ee_pos_u = 0 
-            self.ee_pos_gs = []  #list of array of lenght 3 (1 array for each goal)
-            self.prob_tg_prob_g = []  #[num_goal]
-            self.ee_pos_u_init = True
-            self.ee_pos_s = numpy.zeros(3)
-            self.ee_pos_up = numpy.zeros(3)
+            #print self.cost_ee_pos_s_ee_pos_u
+            self.restart()
 
             
     def callback_user(self, hand_pose):
@@ -108,20 +115,29 @@ class goal_prediction():
             self.prob_tg_prob_g = numpy.zeros(len(ee_pos_g_curr))  
             self.cost_ee_pos_s_ee_pos_u += self.cost(self.ee_pos_up, currpos)
             prob_goal = 1./len(ee_pos_g_curr)   #equal probability of the abstacles
-            for i in range(len(ee_pos_g_curr)):                 
-                goal_num = math.exp(-math.pow(self.cost_ee_pos_s_ee_pos_u + 
-                                              self.cost(currpos, ee_pos_g_curr[i]),2))
-                self.prob_tg_prob_g[i] = goal_num/self.goal_den[i]*prob_goal
+            for i in range(len(ee_pos_g_curr)): 
+                if (len(ee_pos_g_curr) == len(self.prob_tg_prob_g)):
+                    goal_num = math.exp(-math.pow(self.cost_ee_pos_s_ee_pos_u + 
+                                                self.cost(currpos, ee_pos_g_curr[i]),2))
+                    self.prob_tg_prob_g[i] = goal_num/self.goal_den[i]*prob_goal
            
             tot_prob =  numpy.sum(self.prob_tg_prob_g)   
             prob_goal_traj = Float32MultiArray()     
-           
+            
+            to_be_restarted = False
             for i in range(len(ee_pos_g_curr)):
                 pro = self.prob_tg_prob_g[i]/tot_prob
                 if math.isnan(pro):
                     pro = 0.0
+                    to_be_restarted = True
+                    break
+                    self.restart()
+                #if to_be_restarted == False:
                 prob_goal_traj.data.append(pro)
-            self.prob_goal_traj_pub.publish(prob_goal_traj)
+            if to_be_restarted == False:        
+                self.prob_goal_traj_pub.publish(prob_goal_traj)
+            else:
+                self.restart()
             
             
             #FILE.write('*********************' + os.linesep)

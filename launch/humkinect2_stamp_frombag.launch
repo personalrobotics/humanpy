@@ -1,5 +1,0 @@
-<launch>
-    <param name="/global_user" value="0" type="str"/> 
-    <include file="$(find k2_client_vis)/launch/k2_client_vis_frombag.launch"/>          
-    <node name="human_env" pkg="humanpy" type="humkinect2_stamp.py" respawn="false" output="screen"/>
-</launch>

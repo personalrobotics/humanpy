@@ -1,5 +1,0 @@
-<launch>     
-    <include file="$(find humanpy)/launch/humkinect2_grasp.launch"/>
-    <include file="$(find humanpy)/launch/humprediction.launch"/>
-    <include file="$(find concurrent_policy)/launch/pompds.launch"/>   
-</launch>
