@@ -4,21 +4,21 @@
     <arg name="test3" default="False"/>
     <arg name="hand" default="R"/>
     <arg name="bagfile" default="False"/>
-    <arg name="kin" default="True"/>
+    <arg name="kin" default="False"/>
     <arg name="herb_sim" default="False"/>
+    <arg name="obj_detec" default="False"/>
     
     
     <group if="$(arg bagfile)"> 
         <param name="use_sim_time" value="true" />  
         <node pkg="rosbag" type="play" name="playert" output="screen" args="--hz=200 -q --duration=35 --delay=1 --clock /homes/spelle/ros_test_ws/bag/stamp/test1.bag"/>
     </group>
-    
-    
+
     <!--TEST1: PREDEFINED SEQUENCE -->
     <group if="$(arg test1)">    
         <node name="human_env_t1" pkg="humanpy" type="humherb_stamp.py" respawn="false" output="screen">
             <param name="herb_sim" value="$(arg herb_sim)"/>  
-            <param name="bagfile" value="$(arg bagfile)" type="bool"/>  
+            <param name="obj_detec" value="$(arg obj_detec)" type="bool"/>            
         </node>
     </group>   
     
@@ -34,6 +34,7 @@
         <node name="human_env" pkg="humanpy" type="humherb_kin2.py" respawn="false" output="screen">
             <param name="herb_sim" value="$(arg herb_sim)" />  
             <param name="bagfile" value="$(arg bagfile)" /> 
+            <param name="obj_detec" value="$(arg obj_detec)" type="bool"/>
         </node>
         
         <node name="hum_goal_prediction" pkg="humanpy" type="humpred.py" respawn="false" output="screen">
@@ -55,7 +56,8 @@
         
         <node name="human_env_t3" pkg="humanpy" type="humherb_kin2.py" respawn="false" output="screen">
             <param name="herb_sim" value="$(arg herb_sim)"/>  
-            <param name="bagfile" value="$(arg bagfile)" type="bool"/>  
+            <param name="bagfile" value="$(arg bagfile)" type="bool"/> 
+            <param name="obj_detec" value="$(arg obj_detec)" type="bool"/>
         </node>
         
         <node name="hum_goal_prediction_t3" pkg="humanpy" type="humpred.py" respawn="false" output="screen">

@@ -45,7 +45,7 @@ class Orhuman(object):
         self.env = env
         self.robot = env.GetRobot('herb')
         _,self.body = humanpy.initialize(sim=True, passive = hum_goal_predic, 
-                                         user_id=id, env=env)
+                                        user_id=id, env=env)
         self.body.Enable(False)
         self.initialDOFvalues = self.body.GetDOFValues()
         self.currentDOFvalues = self.body.GetDOFValues()        
@@ -63,7 +63,7 @@ class Orhuman(object):
             #self.filter_options = openravepy.IkFilterOptions.CheckEnvCollisions  #or 0 for no collision checks
             self.filter_options = openravepy.IkFilterOptions.IgnoreSelfCollisions
             
-            self.tsr_box_distance = 0.07 #0.14
+            self.tsr_box_distance = 0.04 #0.14
             self.nottouchedobj = []
             self.tsrviz = []   # needed in order to visualize tsr continuosly
             self.tsrs = []
@@ -312,7 +312,7 @@ class Orhuman(object):
     
     def tsrchain(self):
         tsrmsg = PoseArrays()
-        tsrnb =  40 
+        tsrnb =  30 
         self.tsrs = []
         #filter_options = openravepy.IkFilterOptions.CheckEnvCollisions #or 0 for no collision checks
         
@@ -521,30 +521,30 @@ class Orhuman(object):
                     #print 'prob values when reaching the target:', self.xxx
                     #the robot touches the box
                     self.robot.right_arm.Servo(numpy.array([0., 0., 0., 0., 0., 0., 0.])) 
-                    rospy.sleep(0.5) #to be sure the robot is not moving                    
-
-                    body_list = [ obj for obj in self.env.GetBodies() if 'box' in obj.GetName() ]                      
-
-                    #TODO: valid only for the boxes
+                    rospy.sleep(0.5) #to be sure the robot is not moving
+                    #rospy.sleep(0.01) #to be sure the robot is not moving
+                    
+                    #TODO: valido only for the boxes
                     logger.info('Approching the object')
                     #import openravepy
                     #creport = openravepy.CollisionReport()
                     #print self.robot.CheckSelfCollision(creport)
                     #print creport.plink1
                     #print creport.plink2
-                    #if herb_sim == True:
-                       #traj = VectorFieldPlanner().PlanToEndEffectorOffset(self.robot,
-                                                                        #numpy.array([0,0,-1]),
-                                                                        #self.tsr_box_distance,
-                                                                        #position_tolerance=0.04,
-                                                                        #angular_tolerance=0.15)
-                       #self.robot.ExecutePath(traj, timeout=5.0) 
-                    #else:
-                    self.robot.GetActiveManipulator().MoveUntilTouch(numpy.array([0,0,-1]),  
-                                                                        self.tsr_box_distance, 
-                                                                        ignore_collisions=body_list,
-                                                                        max_force=10.0)
-                    #Mark the object as touched
+                    #rospy.sleep(0.5)
+                    traj = VectorFieldPlanner().PlanToEndEffectorOffset(self.robot,
+                                            numpy.array([0,0,-1]),
+                                            self.tsr_box_distance, #0.105 = 0.26(tsr)-0.04(box hieght)-0.01(cyl diplacement)-0.1(cyl hight)
+                                            position_tolerance=0.04,
+                                            angular_tolerance=0.15)  
+                    #with open('/tmp/traj.traj', 'w') as f:
+                        #f.write(traj.serialize())
+                    #print 'Saved traj to file /tmp/traj.traj'                    
+                    #if traj.GetNumWaypoints() > 0:
+                    self.robot.ExecutePath(traj, timeout=5.0)
+                    #if val==None:
+                        #print 'Passed timeout'
+                    
                     for i in range(len(self.tsrs)):
                         for singletsr in self.tsrs[i]:
                             error = self.min_tsr[0:3,3]-singletsr[0:3,3]
@@ -553,16 +553,17 @@ class Orhuman(object):
                     
                     logger.info('Deproaching the object')
                     traj = VectorFieldPlanner().PlanToEndEffectorOffset(self.robot,
-                                                                        numpy.array([0,0,1]),
-                                                                        self.tsr_box_distance,
-                                                                        position_tolerance=0.04,
-                                                                        angular_tolerance=0.15)
+                                            numpy.array([0,0,1]),
+                                            self.tsr_box_distance,
+                                            position_tolerance=0.04,
+                                            angular_tolerance=0.15)
+                 
+                    #if traj.GetNumWaypoints() > 0:
                     self.robot.ExecutePath(traj, timeout=5.0) 
+                        
+                    #if val==None:
+                        #print 'Passed timeout'
 
-                    ##with open('/tmp/traj.traj', 'w') as f:
-                        ##f.write(traj.serialize())
-                    ##print 'Saved traj to file /tmp/traj.traj'         
-                    
                     self.tsrviz = []
                     self.tsrmsg = self.tsrchain()
                     rospy.sleep(0.1) #to be sure the new tsr is send 0.05>0.006

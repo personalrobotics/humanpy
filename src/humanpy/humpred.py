@@ -16,7 +16,7 @@ from std_msgs.msg import Float32MultiArray, Bool
 
 logger = logging.getLogger('goalprediction')
 logger.setLevel(logging.INFO)
-W = 2.5  #6
+W = 11 #2.5  #6
 
 
 #import os
@@ -116,7 +116,7 @@ class goal_prediction():
             self.cost_ee_pos_s_ee_pos_u += self.cost(self.ee_pos_up, currpos)
             prob_goal = 1./len(ee_pos_g_curr)   #equal probability of the abstacles
             for i in range(len(ee_pos_g_curr)): 
-                if (len(ee_pos_g_curr) == len(self.prob_tg_prob_g)):
+                if len(ee_pos_g_curr) == len(self.prob_tg_prob_g) and len(ee_pos_g_curr) == len(self.goal_den):
                     goal_num = math.exp(-math.pow(self.cost_ee_pos_s_ee_pos_u + 
                                                 self.cost(currpos, ee_pos_g_curr[i]),2))
                     self.prob_tg_prob_g[i] = goal_num/self.goal_den[i]*prob_goal
@@ -126,14 +126,15 @@ class goal_prediction():
             
             to_be_restarted = False
             for i in range(len(ee_pos_g_curr)):
-                pro = self.prob_tg_prob_g[i]/tot_prob
-                if math.isnan(pro):
-                    pro = 0.0
-                    to_be_restarted = True
-                    break
-                    self.restart()
-                #if to_be_restarted == False:
-                prob_goal_traj.data.append(pro)
+                if len(ee_pos_g_curr) == len(self.prob_tg_prob_g):
+                    pro = self.prob_tg_prob_g[i]/tot_prob
+                    if math.isnan(pro):
+                        pro = 0.0
+                        to_be_restarted = True
+                        break
+                        self.restart()
+                    #if to_be_restarted == False:
+                    prob_goal_traj.data.append(pro)
             if to_be_restarted == False:        
                 self.prob_goal_traj_pub.publish(prob_goal_traj)
             else:
