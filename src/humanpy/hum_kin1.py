@@ -12,7 +12,7 @@ KIN_FRAME = '/head/skel_depth_frame'
 
     
 class Orhuman(object):
-    def __init__(self, id, env):
+    def __init__(self, id, env, **kw_args):
         assert id != ''
         self.id = id
         self.enabled = True
@@ -239,7 +239,7 @@ def humanInList(human, ids):
         if human.id == 'user_' + id: return True
     return False
         
-def addRemoveHumans(tf, humans, env):
+def addRemoveHumans(tf, humans, env, ***kw_args):
     import re
     matcher = re.compile('.*user_(\\d+).*')
     all_tfs = tf.getFrameStrings()

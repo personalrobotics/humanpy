@@ -34,15 +34,6 @@ The example call the herb initialization function and than load the human robot.
 
 
 ## Using humanpy with kinect 2 ##
-`humherb_kin2.py` lanches the script `humherb_kin2.py` contains an example on how to use the data coming from the kinect 2 (through `k2_client` - https://github.com/personalrobotics/k2_client and `k2_client_vis` - https://github.com/personalrobotics/k2_client_vis).
-The example calls herb initialization function and than load the human robot. The human is moved accordingly to the data coming from the kinect.
+`humherb_kin2.py` lanches the script `humherb_kin2.launch` contains an example on how to use the data coming from the kinect 2 (through `k2_client` - https://github.com/personalrobotics/k2_client and `k2_client_vis` - https://github.com/personalrobotics/k2_client_vis).
+The example calls herb initialization function and than loads the human robot. The human is moved accordingly to the data coming from the kinect.
 
-
-## Using humanpy with kinect 2 for prediction purposes##
-`humpredherb_kin2.py` is used for predicion experiments. Three tests can be run: 1) the robot executes a redefined sequence independently from the human movements 2) the robot performs an action on the goal that is different from the one tath will be touched with higest probability by the human 3) the robot performs an action on the goal that is has the lowest probability to be touched by the human 
-
-To launch the simulation from a predefined bagfile:
-`roslaunch humanpy humpredherb_kin2.launch testX:=True bag_file:=True herb_sim:=True` where X is the number of the desired experiment
-
-To launch the program in the real word:
-`roslaunch humanpy humpredherb_kin2.launch testX:=True kin:=True obj_detec:=True` where X is the number of the desired experiment

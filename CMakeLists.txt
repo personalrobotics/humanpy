@@ -7,29 +7,29 @@ project(humanpy)
 find_package(catkin REQUIRED COMPONENTS
    #roscpp
    rospy
-   std_msgs
-   geometry_msgs
-   message_generation
+   #std_msgs
+   #geometry_msgs
+   #message_generation
 )
 catkin_python_setup()
 
-add_message_files(
-  FILES
-  PoseArrays.msg
-)
+# add_message_files(
+#   FILES
+#   PoseArrays.msg
+# )
 
-generate_messages(
-    DEPENDENCIES
-        std_msgs
-        geometry_msgs
-)
+# generate_messages(
+#     DEPENDENCIES
+#         std_msgs
+#         geometry_msgs
+# )
 
 catkin_package(
-    CATKIN_DEPENDS
+    #CATKIN_DEPENDS
         #roscpp
         #std_msgs
         #geometry_msgs
-        message_runtime
+        #message_runtime
 )
 
 

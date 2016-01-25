@@ -6,12 +6,7 @@ import time
 import herbpy
 from modular_action_planning.tasks.taskUtils import setupTableEnv
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='load human skeleton in herb env')
-    parser.add_argument('--debug', action='store_true',
-                        help='enable debug logging')
-    args = parser.parse_args()
-    
+if __name__ == "__main__":    
     logger = logging.getLogger('test_skel_herb')
     logger.setLevel(logging.INFO)
 

@@ -15,5 +15,5 @@
         <include file="$(find k2_client_vis)/launch/k2_client_vis.launch"/> 
     </group>    
     
-    <node name="human_env" pkg="humanpy" type="humherb_kin2_simply.py" respawn="false" output="screen"/>
+    <node name="human_env" pkg="humanpy" type="humkin2_herb.py" respawn="false" output="screen"/>
 </launch>
