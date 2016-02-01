@@ -5,9 +5,6 @@ import rospkg
 import logging
 import copy
 import collections
-from geometry_msgs.msg import Pose, PoseArray
-from std_msgs.msg import Float32MultiArray, Bool
-from msg import PoseArrays
 from scipy import signal
 from tf import transformations, LookupException, ConnectivityException, ExtrapolationException, TransformListener
 import humanpy
