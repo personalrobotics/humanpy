@@ -39,4 +39,7 @@ The example call the herb initialization function and than load the human robot.
 ## Using humanpy with kinect 2 ##
 `humherb_kin2.launch` lanches the script `humherb_kin2.py` that contains an example on how to use the data coming from the kinect 2 (through `k2_client` - https://github.com/personalrobotics/k2_client and `k2_client_vis` - https://github.com/personalrobotics/k2_client_vis).
 The example calls herb initialization function and than loads the human. The human is moved accordingly to the data coming from the kinect.
+If herb localization is active (segway simulation is False), set the param seg_sim:=False:
 
+    'roslaunch humanpy humherb_kin2.launch seg_sim:=False'
+    

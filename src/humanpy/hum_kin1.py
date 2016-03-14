@@ -234,7 +234,7 @@ def humanInList(human, ids):
         if human.id == 'user_' + id: return True
     return False
         
-def addRemoveHumans(tf, humans, env, ***kw_args):
+def addRemoveHumans(tf, humans, env, **kw_args):
     import re
     matcher = re.compile('.*user_(\\d+).*')
     all_tfs = tf.getFrameStrings()

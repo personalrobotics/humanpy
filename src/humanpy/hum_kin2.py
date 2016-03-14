@@ -1,20 +1,9 @@
 PACKAGE = 'humanpy'
 import numpy
 import rospy
-import rospkg
 import logging
-import copy
-import collections
-from scipy import signal
-from tf import transformations, LookupException, ConnectivityException, ExtrapolationException, TransformListener
+from tf import transformations
 import humanpy
-import herbpy
-from prpy.planning import Sequence, VectorFieldPlanner, TSRPlanner
-from prpy.base import wam
-from prpy import util, viz
-from prpy.planning.exceptions import CollisionPlanningError, SelfCollisionPlanningError
-import random
-import openravepy
 
 BASE_FRAME = '/map'
 KIN_FRAME = '/head/skel_depth_frame'
