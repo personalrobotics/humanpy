@@ -16,15 +16,12 @@ from prpy.planning.exceptions import CollisionPlanningError, SelfCollisionPlanni
 import random
 import openravepy
 
-
 BASE_FRAME = '/map'
 KIN_FRAME = '/head/skel_depth_frame'
 KIN_FRAME2 = '/head/skel_depth_frame2'
 
 logger = logging.getLogger('humanpy')
 logger.setLevel(logging.INFO)
-
-
 
 class Orhuman(object):
     def __init__(self, id, env, enable_legs=True, segway_sim=True):
@@ -44,9 +41,6 @@ class Orhuman(object):
             self.refsys = KIN_FRAME2 
         else: 
             self.refsys = KIN_FRAME
-
-        
-  
 
     def hide(self):
         self.body.SetVisible(False)
@@ -183,7 +177,6 @@ class Orhuman(object):
                 
                 self.currentDOFvalues[joint.GetDOFIndex()] = angle           
                 self.body.SetDOFValues(self.currentDOFvalues)
-       
     
     def define_pose_from_eetransform(self, ee_pose):
         ee_quat = transformations.quaternion_from_matrix(ee_pose)        
@@ -207,7 +200,6 @@ class Orhuman(object):
         pose.orientation.z = quat[2]
         pose.orientation.w = quat[3]        
         return pose  
- 
 
     def update(self, tf):     
         TIME_TO_WAIT = 1
@@ -244,7 +236,6 @@ class Orhuman(object):
             person_position_transform[0:4,3] = person_transform[0:4,3]
             person_position_transform[2,3] = 0.85
             self.body.SetTransform(person_position_transform)
-
         
         ##Left arm
         ul_angles = self.getUpperLimbAngles(tf, 'L')

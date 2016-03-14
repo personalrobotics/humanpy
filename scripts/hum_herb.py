@@ -8,9 +8,6 @@ from prpy.rave import add_object
 from modular_action_planning.tasks.taskUtils import setupTableEnv
 import herbpy
 import humanpy
-#from  humanpy.action import grasping
-#from modular_action_planning.core_actions.robot import MoveHandTo
-#from taskPlanningActions.pushGrasp import PushGrasp
 
 if __name__ == "__main__":
     
@@ -47,18 +44,10 @@ if __name__ == "__main__":
         fuze_pose = fuze.GetTransform()
         fuze_pose[:3,3] = numpy.transpose([x, y, z])
         fuze.SetTransform(fuze_pose)
-        #env.AddKinBody(fuze)
    
     # Grasp the bottle 
     #human.right_arm.Grasp(fuze)
-    #human.right_arm.PlanToNamedConfiguration('home',execute=True)    
-    #herb.left_arm.Grasp(glass)
     herb.right_arm.Grasp(bowl)
-    #herb.right_arm.PushGrasp(glass, push_required=False)
-    #herb.right_arm.PlanToNamedConfiguration('home',execute=True)
-    
-    
-    
 
     raw_input("press enter to quit!")
  

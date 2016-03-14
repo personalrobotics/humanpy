@@ -35,8 +35,6 @@ class Orhuman(object):
         self.collcar = collections.deque(maxlen=300)
         #N=2 o 4, Wn = 0.01-0.1 cmq comrepso tra 0 e 1
         self.B, self.A = signal.butter(4, 0.01, output='ba')
-       
-
 
     def hide(self):
         self.body.SetVisible(False)
@@ -55,7 +53,6 @@ class Orhuman(object):
         if arg > 1.0: arg = 1.0
         if arg < -1.0: arg = -1.0
         return arg
-    
 
     def getSkeletonTransformation(self, tf, tf_name, world_name=BASE_FRAME):
         tf_name_full = self.getFullTfName(tf_name)
@@ -166,10 +163,10 @@ class Orhuman(object):
     def update(self, tf):
         TIME_TO_WAIT = 1
         time_since_last_update = rospy.get_rostime().secs - self.last_updated
-        #if self.enabled and time_since_last_update > TIME_TO_WAIT:
-            #self.hide()
-        #elif not self.enabled and time_since_last_update <= TIME_TO_WAIT:
-            #self.show()
+        if self.enabled and time_since_last_update > TIME_TO_WAIT:
+            self.hide()
+        elif not self.enabled and time_since_last_update <= TIME_TO_WAIT:
+            self.show()
         
         #Chest
         person_transform = self.getSkeletonTransformation(tf, 'torso')
@@ -231,8 +228,6 @@ class Orhuman(object):
         self.checkLimits(self.body.GetJoint('JRCalf'), ul_angles, 1, self.collcar)
                 
         #TODO; head, neck   
-        
-
 
 def humanInList(human, ids):
     for id in ids:
