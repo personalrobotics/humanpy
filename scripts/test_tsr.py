@@ -19,7 +19,13 @@ if __name__ == "__main__":
         glass.SetTransform(glass_pose)
         fuze.Enable(True)
         glass.Enable(True)
-
+    
+    robotLocation = numpy.array([[ 0. ,  0. ,  1. ,   0.4],
+                                [ 1. ,  0. ,  0. ,  -0.1],
+                                [ 0. ,  1. ,  0. ,   0.3],
+                                [ 0. ,  0. ,  0. ,   1. ]]) 
+    robot.SetTransform(robotLocation)
+    
     robot.right_arm.SetActive()
     #robot.right_arm.Grasp(fuze)
 

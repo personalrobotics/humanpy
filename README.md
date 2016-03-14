@@ -20,7 +20,10 @@ it allows the use of the human as a representative of a real human that is prese
 
 ``user_id=id`` :
 it is required in order to have different humans in the same environment. It has to be defined both for ``sim=True`` and ``sim=False``
-env is the environment. It allows to use of an environmet containing herb. If env is not set, a new environment is generated.
+env is the environment. 
+
+``env``:
+It allows the use of an environmet in which also herb is loaded. If env is not set or is equal to None, a new environment is generated.
 
 You can also optionally attach a viewer to the OpenRave environment by passing ``attach_viewer=True``.
 
@@ -34,6 +37,6 @@ The example call the herb initialization function and than load the human robot.
 
 
 ## Using humanpy with kinect 2 ##
-`humherb_kin2.py` lanches the script `humherb_kin2.launch` contains an example on how to use the data coming from the kinect 2 (through `k2_client` - https://github.com/personalrobotics/k2_client and `k2_client_vis` - https://github.com/personalrobotics/k2_client_vis).
-The example calls herb initialization function and than loads the human robot. The human is moved accordingly to the data coming from the kinect.
+`humherb_kin2.launch` lanches the script `humherb_kin2.py` that contains an example on how to use the data coming from the kinect 2 (through `k2_client` - https://github.com/personalrobotics/k2_client and `k2_client_vis` - https://github.com/personalrobotics/k2_client_vis).
+The example calls herb initialization function and than loads the human. The human is moved accordingly to the data coming from the kinect.
 

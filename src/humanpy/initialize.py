@@ -23,7 +23,7 @@ import numpy
 
 logger = logging.getLogger('humanpy')
 
-def initialize(attach_viewer = False, sim = True, user_id = 'human', env = None):
+def initialize(attach_viewer=False, sim=True, user_id='human', env=None):
     """Initialize the Human Robot"""
     
     prpy.logger.initialize_logging()
@@ -43,19 +43,13 @@ def initialize(attach_viewer = False, sim = True, user_id = 'human', env = None)
         print objects_path # for me this is '/home/spelle/storage/ros_test_ws/src/humanpy/ordata/dae/man1.dae'
         objects_path = objects_path[0]
     
-    #if not sim: 
-        #sim = True
-        #logger.Warning('Only simulation mode is available')
-    
     if not env:
         env = Environment()
 
     #Setup Manipulators
     with env:
         robot_file = os.path.join(objects_path, 'man1.dae')
-        #robot = env.ReadKinBodyXMLFile('/home/spelle/storage/ros_test_ws/src/humanpy/ordata/dae/man1.dae')
         robot = env.ReadKinBodyXMLFile(robot_file)
-        #robot = env.ReadKinBodyXMLFile('robots/man1.zae')
         robot.SetName(user_id)              #needed in order to have different humans in the same env
         env.AddKinBody(robot) 
 
@@ -66,8 +60,6 @@ def initialize(attach_viewer = False, sim = True, user_id = 'human', env = None)
         robot.right_arm = robot.GetManipulator('rightarm')
         robot.right_arm.hand = robot.right_arm.GetEndEffector()
         robot.right_hand = robot.right_arm.hand
-        
-
 
         bind_subclass(robot, Robot, robot_name=user_id)
         bind_subclass(robot.left_arm, Manipulator)
