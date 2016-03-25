@@ -20,13 +20,12 @@ if __name__ == "__main__":
         fuze.Enable(True)
         glass.Enable(True)
     
-    robotLocation = numpy.array([[ 0. ,  0. ,  1. ,   0.4],
-                                [ 1. ,  0. ,  0. ,  -0.1],
-                                [ 0. ,  1. ,  0. ,   0.3],
-                                [ 0. ,  0. ,  0. ,   1. ]]) 
-    robot.SetTransform(robotLocation)
+        robotLocation = numpy.array([[ 0. ,  0. ,  1. ,   0.4],
+                                    [ 1. ,  0. ,  0. ,  -0.1],
+                                    [ 0. ,  1. ,  0. ,   0.3],
+                                    [ 0. ,  0. ,  0. ,   1. ]]) 
+        robot.SetTransform(robotLocation)        
+        robot.right_arm.SetActive()
     
-    robot.right_arm.SetActive()
     #robot.right_arm.Grasp(fuze)
-
     raw_input("press enter to quit!")

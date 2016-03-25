@@ -38,6 +38,6 @@ if __name__ == "__main__":
         fuze.SetName('fuze')
         env.AddKinBody(fuze)
 
-    herb.DetectHuman(env, orhuman=1)
+    herb.DetectHuman(env, orhuman='kin1_or')
 
 

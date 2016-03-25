@@ -6,82 +6,66 @@ import collections
 from scipy import signal
 from tf import transformations, LookupException, ConnectivityException, ExtrapolationException
 import humanpy
+import utils
 
-BASE_FRAME = '/map'
-KIN_FRAME = '/head/skel_depth_frame'
+#Butterworth digital and analog filter design
+N=4
+WN=0.01
+OUTPUT='ba'
+MAXLEN = 300         #maximum number of samples to be considered when fitlering
+FILTERING_SAMPLES=15 #number of samples to be in the vector before starting filtering
 
     
 class Orhuman(object):
-    def __init__(self, id, env, **kw_args):
+    def __init__(self, id, env, 
+                 base_frame='/map',
+                 kin_frame='/head/skel_depth_frame',
+                 **kw_args):
         assert id != ''
         self.id = id
         self.enabled = True
+        self.env = env
+        self.base_frame = base_frame
+        self.kin_frame = kin_frame
         _,self.body = humanpy.initialize(sim=False, user_id=id, env=env)
-        self.initialDOFvalues = self.body.GetDOFValues()
-        self.currentDOFvalues = self.body.GetDOFValues()        
+        with env:
+            self.initialDOFvalues = self.body.GetDOFValues()
+            self.currentDOFvalues = self.body.GetDOFValues()        
         self.starting_angle = dict()
         self.last_updated = rospy.get_rostime().secs
-        self.collshl = collections.deque(maxlen=300)
-        self.collsh2l = collections.deque(maxlen=300)
-        self.collsh3l = collections.deque(maxlen=300)
-        self.collell = collections.deque(maxlen=300)
-        self.collshr = collections.deque(maxlen=300)
-        self.collsh2r = collections.deque(maxlen=300)
-        self.collsh3r = collections.deque(maxlen=300)
-        self.collelr = collections.deque(maxlen=300)
-        self.collthl = collections.deque(maxlen=300)
-        self.collcal = collections.deque(maxlen=300)
-        self.collthr = collections.deque(maxlen=300)
-        self.collcar = collections.deque(maxlen=300)
-        #N=2 o 4, Wn = 0.01-0.1 cmq comrepso tra 0 e 1
-        self.B, self.A = signal.butter(4, 0.01, output='ba')
+        self.collshl = collections.deque(maxlen=MAXLEN)
+        self.collsh2l = collections.deque(maxlen=MAXLEN)
+        self.collsh3l = collections.deque(maxlen=MAXLEN)
+        self.collell = collections.deque(maxlen=MAXLEN)
+        self.collshr = collections.deque(maxlen=MAXLEN)
+        self.collsh2r = collections.deque(maxlen=MAXLEN)
+        self.collsh3r = collections.deque(maxlen=MAXLEN)
+        self.collelr = collections.deque(maxlen=MAXLEN)
+        self.collthl = collections.deque(maxlen=MAXLEN)
+        self.collcal = collections.deque(maxlen=MAXLEN)
+        self.collthr = collections.deque(maxlen=MAXLEN)
+        self.collcar = collections.deque(maxlen=MAXLEN)
+        #N=2 or 4, Wn = 0.01-0.1.  0<Wn<1
+        self.B, self.A = signal.butter(N, WN, output=OUTPUT)
 
-    def hide(self):
-        self.body.SetVisible(False)
-        self.body.Enable(False)
-        self.enabled = False
-
-    def show(self):
-        self.body.SetVisible(True)
-        self.body.Enable(True)
-        self.enabled = True
-
-    def getFullTfName(self, link_name):
-        return '/skel/' + self.id + '/' + link_name
-                
-    def checkArg(self, arg):
-        if arg > 1.0: arg = 1.0
-        if arg < -1.0: arg = -1.0
-        return arg
-
-    def getSkeletonTransformation(self, tf, tf_name, world_name=BASE_FRAME):
-        tf_name_full = self.getFullTfName(tf_name)
-        if tf.frameExists(tf_name_full) and tf.frameExists(world_name):    
-            try:                
-                time = tf.getLatestCommonTime(tf_name_full, world_name)
-                pos, quat = tf.lookupTransform(world_name, tf_name_full, time)
-            except:
-                return None
-            self.last_updated = time.secs if self.last_updated <= time.secs else self.last_updated
-            r = transformations.quaternion_matrix(quat)
-            skel_trans = transformations.identity_matrix()
-            skel_trans[0:4,0:4] = r
-            skel_trans[0:3, 3] = pos    
-            return skel_trans
-        else:
-            return None
- 
     def getUpperLimbAngles(self, tf, side):
+        """
+        Defines the joint angles of the human arm, starting from the position
+        of the tf generated accordin to the data coming from the kinect
+        
+        @param tf tf
+        @param 'L' for left upper limb, 'R' for right upper limb
+        """
         if side == 'L':        
             #4: elbow (-x), #3: shoulder 3 (y), #2: shoulder 2 (z), #1: shoulder (-x) in kin frame
-            sys_shoulder = self.getSkeletonTransformation(tf, 'left_shoulder', KIN_FRAME)
-            sys_elbow = self.getSkeletonTransformation(tf, 'left_elbow', KIN_FRAME)
-            sys_hand = self.getSkeletonTransformation(tf, 'left_hand', KIN_FRAME)
+            self.last_updated, sys_shoulder = utils.getSkeletonTransformation(self.id, tf, 'left_shoulder', self.kin_frame, self.last_updated)
+            self.last_updated, sys_elbow = utils.getSkeletonTransformation(self.id, tf, 'left_elbow', self.kin_frame, self.last_updated)
+            self.last_updated, sys_hand = utils.getSkeletonTransformation(self.id, tf, 'left_hand', self.kin_frame, self.last_updated)
         else:
             #4: elbow (-x), #3: shoulder 3 (-y), #2: shoulder 2 (-z), #1: shoulder (-x)  in kin frame
-            sys_shoulder = self.getSkeletonTransformation(tf, 'right_shoulder', KIN_FRAME)
-            sys_elbow = self.getSkeletonTransformation(tf, 'right_elbow', KIN_FRAME)
-            sys_hand = self.getSkeletonTransformation(tf, 'right_hand', KIN_FRAME)
+            self.last_updated, sys_shoulder = utils.getSkeletonTransformation(self.id, tf, 'right_shoulder', self.kin_frame, self.last_updated)
+            self.last_updated, sys_elbow = utils.getSkeletonTransformation(self.id, tf, 'right_elbow', self.kin_frame, self.last_updated)
+            self.last_updated, sys_hand = utils.getSkeletonTransformation(self.id, tf, 'right_hand', self.kin_frame, self.last_updated)
            
         if sys_shoulder is None or sys_elbow is None or sys_hand is None:
             return None
@@ -97,18 +81,18 @@ class Orhuman(object):
         q4 = - numpy.arccos(numpy.asscalar(numpy.dot(vect_he.T,vect_es)))                   #[0,-pi]
         
         if side == 'L': 
-            q2 = numpy.asscalar(numpy.arcsin(self.checkArg(-vect_es[0])))                   #[-pi/2,pi/2]
+            q2 = numpy.asscalar(numpy.arcsin(utils.checkArg(-vect_es[0])))                   #[-pi/2,pi/2]
         else:
-            q2 = numpy.asscalar(numpy.arcsin(self.checkArg(vect_es[0]))) 
+            q2 = numpy.asscalar(numpy.arcsin(utils.checkArg(vect_es[0]))) 
         if sys_sh_elb[1,3] > 0:                                                             #projection on y of the sys origin. if y positive, add pi/2
             q2 = q2 + numpy.sign(q2)*numpy.pi/2                                             #[-pi,pi]
 
         if numpy.abs(numpy.cos(q2)) > 0.1:
-            q1 = numpy.asscalar(numpy.arccos(self.checkArg(vect_es[1]/numpy.cos(q2))))      #[0,pi]
-            if numpy.asscalar(numpy.arcsin(self.checkArg(-vect_es[2]/numpy.cos(q2)))) < 0:  #[-pi,pi]
+            q1 = numpy.asscalar(numpy.arccos(utils.checkArg(vect_es[1]/numpy.cos(q2))))      #[0,pi]
+            if numpy.asscalar(numpy.arcsin(utils.checkArg(-vect_es[2]/numpy.cos(q2)))) < 0:  #[-pi,pi]
                 q1 = -q1
             
-            q3 = numpy.asscalar(numpy.arccos(self.checkArg(-vect_norm_es_eh[0]/numpy.cos(q2))))                
+            q3 = numpy.asscalar(numpy.arccos(utils.checkArg(-vect_norm_es_eh[0]/numpy.cos(q2))))                
         else:
             q1 = None
             q3 = None
@@ -116,14 +100,21 @@ class Orhuman(object):
         return [q1, q2, q3, q4]
 
     def getLowerLimbAngles(self, tf, side):
+        """
+        Defines the joint angles of the human legs, starting from the position
+        of the tf generated accordin to the data coming from the kinect
+        
+        @param tf tf
+        @param 'L' for left lower limb, 'R' for right lower limb
+        """
         if side == 'L':        
-            sys_hip = self.getSkeletonTransformation(tf, 'left_hip', KIN_FRAME)
-            sys_knee = self.getSkeletonTransformation(tf, 'left_knee', KIN_FRAME)
-            sys_foot = self.getSkeletonTransformation(tf, 'left_foot', KIN_FRAME)
+            self.last_updated, sys_hip = utils.getSkeletonTransformation(self.id, tf, 'left_hip', self.kin_frame, self.last_updated)
+            self.last_updated, sys_knee = utils.getSkeletonTransformation(self.id, tf, 'left_knee', self.kin_frame, self.last_updated)
+            self.last_updated, sys_foot = utils.getSkeletonTransformation(self.id, tf, 'left_foot', self.kin_frame, self.last_updated)
         else:            
-            sys_hip = self.getSkeletonTransformation(tf, 'right_hip', KIN_FRAME)
-            sys_knee = self.getSkeletonTransformation(tf, 'right_knee', KIN_FRAME)
-            sys_foot = self.getSkeletonTransformation(tf, 'right_foot', KIN_FRAME)
+            self.last_updated, sys_hip = utils.getSkeletonTransformation(self.id, tf, 'right_hip', self.kin_frame, self.last_updated)
+            self.last_updated, sys_knee = utils.getSkeletonTransformation(self.id, tf, 'right_knee', self.kin_frame, self.last_updated)
+            self.last_updated, sys_foot = utils.getSkeletonTransformation(self.id, tf, 'right_foot', self.kin_frame, self.last_updated)
             
         if sys_hip is None or sys_knee is None or sys_foot is None:
             return None
@@ -132,7 +123,7 @@ class Orhuman(object):
                   numpy.linalg.norm([sys_hip[0:3,3] - sys_knee[0:3,3]])
         vect_fk = (sys_knee[0:3,3] - sys_foot[0:3,3])/ \
                   numpy.linalg.norm([sys_knee[0:3,3] - sys_foot[0:3,3]])
-        q2 = - numpy.arccos(self.checkArg(numpy.asscalar(numpy.dot(vect_kh.T,vect_fk))))
+        q2 = - numpy.arccos(utils.checkArg(numpy.asscalar(numpy.dot(vect_kh.T,vect_fk))))
         
         q1 = numpy.asscalar(numpy.arccos(vect_kh[1]))                                       #[0,pi]
         if numpy.asscalar(numpy.arcsin(vect_kh[2])) < 0:                                    #[-pi,pi]
@@ -141,35 +132,48 @@ class Orhuman(object):
         return [q1, q2]
   
     def checkLimits(self, joint, angle_vect, angle_elem, collection):
+        """
+        Check if the identify joint value is in the range imposed by the human
+        loded into the simulation env. If not, the joint value is adjusted. 
+        Joint value is finally filtered.
+        
+        @param joint joint
+        @param angle_vector vector of the joint values
+        @param angle_elem position of the joint value to be checked in angle_vector
+        """
         if angle_vect is not None:
             angle = angle_vect[angle_elem]
             if angle is not None and joint is not None:
                 lower,upper = joint.GetLimits()
-                if angle < lower: angle = lower
-                if angle > upper: angle = upper
+                angle = utils.constrain(angle, lower, upper)
                 
                 collection.append(float(angle))
-                if len(collection) > 15:
+                if len(collection) > FILTERING_SAMPLES:
                     filtered_angles = signal.filtfilt(self.B, self.A, list(collection))
-                    #print 'collection'
-                    #print collection
-                    #print 'filtered_angles'
                     filtered_angle = filtered_angles[len(collection)-1]
                     if filtered_angle < lower: filtered_angle = lower
                     if filtered_angle > upper: filtered_angle = upper
-                    self.currentDOFvalues[joint.GetDOFIndex()] = filtered_angle           
-                    self.body.SetDOFValues(self.currentDOFvalues)
+                    self.currentDOFvalues[joint.GetDOFIndex()] = filtered_angle     
+                    with self.env:
+                        self.body.SetDOFValues(self.currentDOFvalues)
+
+    def update(self, tf, time_to_wait):
+        """
+        Update the joint valued of human in the simualted environment
+        on the basis of the position of the reference systems coming from
+        the kinect
         
-    def update(self, tf):
-        TIME_TO_WAIT = 1
+        @param tf tf
+        @param time_to_wait determine the frequency of the update. Expressed in seconds.
+        """ 
         time_since_last_update = rospy.get_rostime().secs - self.last_updated
-        if self.enabled and time_since_last_update > TIME_TO_WAIT:
-            self.hide()
-        elif not self.enabled and time_since_last_update <= TIME_TO_WAIT:
-            self.show()
+        if self.enabled and time_since_last_update > time_to_wait:
+            self.enabled = utils.hide(self.env, self.body)
+        elif not self.enabled and time_since_last_update <= time_to_wait:
+            self.enabled = utils.show(self.env, self.body)
         
         #Chest
-        person_transform = self.getSkeletonTransformation(tf, 'torso')
+        self.last_updated, person_transform = utils.getSkeletonTransformation(self.id, tf, 'torso', self.base_frame, self.last_updated)
         if person_transform is not None: 
             #human face to kinect
             person_orient_change =  numpy.array([[ -1. ,  0. ,  0. ,  0.],
@@ -229,27 +233,24 @@ class Orhuman(object):
                 
         #TODO; head, neck   
 
-def humanInList(human, ids):
-    for id in ids:
-        if human.id == 'user_' + id: return True
-    return False
-        
-def addRemoveHumans(tf, humans, env, **kw_args):
-    import re
-    matcher = re.compile('.*user_(\\d+).*')
-    all_tfs = tf.getFrameStrings()
-    all_human_ids = []
-    for frame_name in all_tfs:
-        match = matcher.match(frame_name)
-        if match is not None:
-            all_human_ids.append(match.groups()[0])
 
-    # removing
-    humans_to_remove = [x for x in humans if not humanInList(x, all_human_ids)]
-    for human in humans_to_remove:
-        env.RemoveKinBody(human);
-        human.destroy()
-        humans.remove(human)
+def addRemoveHumans(tf, humans, env,                     
+                    base_frame='/map',
+                    kin_frame='/head/skel_depth_frame',
+                    **kw_args):
+        
+    """
+    Add or remove humans in the simulated environment on the basis 
+    of the information coming from the kinect
+    
+    @param tf tf
+    @param humans vector of the humans that are loaded into the simualted environment
+    @base_frame reference frame of the environment
+    @kin_frame frame respect to all the tf coming from the kinect are publisched
+    """ 
+
+    all_human_ids = utils.humanList(tf)
+    utils.removeHumans(all_human_ids, humans, env)
         
     # adding
     for id in all_human_ids:
@@ -259,5 +260,7 @@ def addRemoveHumans(tf, humans, env, **kw_args):
                 found = True
                 break
         if not found:
-            humans.append(Orhuman('user_' + id, env))
+            humans.append(Orhuman('user_' + id, env,
+                                  base_frame='/map',
+                                  kin_frame='/head/skel_depth_frame'))
 

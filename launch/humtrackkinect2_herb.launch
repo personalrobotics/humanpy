@@ -17,7 +17,7 @@
         <node pkg="tf" type="static_transform_publisher" name="map_trial" args="0.0 0.0 0.0 0.0 0.0 0.0 1.0 map /refste 100" />
     </group>
     
-    <node name="human_env" pkg="humanpy" type="humkin2_herb.py" respawn="false" output="screen">
+    <node name="human_env" pkg="humanpy" type="humtrackkinect2_herb.py" respawn="false" output="screen">
         <param name="seg_sim" value="$(arg seg_sim)"/>  
     </node>
 </launch>

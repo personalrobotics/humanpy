@@ -13,7 +13,12 @@ if __name__ == "__main__":
     
     env, herb = herbpy.initialize(attach_viewer='InteractiveMarker', segway_sim=segway_sim)
 
-    herb.DetectHuman(env, orhuman=2, segway_sim=segway_sim)
+    if segway_sim==True: 
+        refsys = '/head/skel_depth_frame2' 
+    else: 
+        refsys = '/head/skel_depth_frame'
+    
+    herb.DetectHuman(env, orhuman='kin2_or', segway_sim=segway_sim, kin_frame=refsys)
 
 
 

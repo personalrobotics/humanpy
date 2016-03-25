@@ -69,36 +69,34 @@ def initialize(attach_viewer=False, sim=True, user_id='human', env=None):
         bind_subclass(robot.right_arm.hand, HumanHand, manipulator=robot.right_arm, sim=True)
         
         #Setup Controller
-        with env:
-            controller_dof_indices = []
-            controller_dof_indices.extend(robot.left_arm.GetArmIndices())
-            controller_dof_indices.extend(robot.right_arm.GetArmIndices())
+        controller_dof_indices = []
+        controller_dof_indices.extend(robot.left_arm.GetArmIndices())
+        controller_dof_indices.extend(robot.right_arm.GetArmIndices())
 
-            robot.right_arm.controller = robot.AttachController(
-                    name=robot.right_arm.GetName(), args='',
-                    dof_indices=robot.right_arm.GetArmIndices(), affine_dofs=0, 
-                    simulated=sim)
-            robot.left_arm.controller = robot.AttachController(
-                    name=robot.left_arm.GetName(), args='',
-                    dof_indices=robot.left_arm.GetArmIndices(), affine_dofs=0, 
-                    simulated=sim)
+        robot.right_arm.controller = robot.AttachController(
+                name=robot.right_arm.GetName(), args='',
+                dof_indices=robot.right_arm.GetArmIndices(), affine_dofs=0, 
+                simulated=sim)
+        robot.left_arm.controller = robot.AttachController(
+                name=robot.left_arm.GetName(), args='',
+                dof_indices=robot.left_arm.GetArmIndices(), affine_dofs=0, 
+                simulated=sim)
 
         #Setup IK
-        with env:
-            ikmodel_left = InverseKinematicsModel(
-                    robot,
-                    iktype=IkParameterizationType.Transform6D,
-                    manip=robot.left_arm)
-            if not ikmodel_left.load():
-                ikmodel_left.autogenerate()
+        ikmodel_left = InverseKinematicsModel(
+                robot,
+                iktype=IkParameterizationType.Transform6D,
+                manip=robot.left_arm)
+        if not ikmodel_left.load():
+            ikmodel_left.autogenerate()
 
-            ikmodel_right = InverseKinematicsModel(
-                    robot,
-                    iktype=IkParameterizationType.Transform6D,
-                    manip=robot.right_arm)
-            
-            if not ikmodel_right.load():            
-                ikmodel_right.autogenerate()
+        ikmodel_right = InverseKinematicsModel(
+                robot,
+                iktype=IkParameterizationType.Transform6D,
+                manip=robot.right_arm)
+        
+        if not ikmodel_right.load():            
+            ikmodel_right.autogenerate()
 
         #Setup planning pipeline
         robot.planner = Sequence(
@@ -113,29 +111,30 @@ def initialize(attach_viewer=False, sim=True, user_id='human', env=None):
 
     #Setup viewer. Default to load rviz
     if env.GetViewer() is None:
-      if attach_viewer == True:
-	  attach_viewer = 'rviz'
-	  env.SetViewer('attach_viewer')
+        if attach_viewer == True:
+            attach_viewer = 'rviz'
+            env.SetViewer(attach_viewer)
 
-	  #Fallback on qtcoin if rviz couldnt load
-	  if env.GetViewer is None:
-	      logger.warning('Loading the Rviz viewer failed. Falling back on qtcoin')
-	      attach_viewer = 'qtcoin'
+            #Fallback on qtcoin if rviz couldnt load
+            if env.GetViewer is None:
+                logger.warning('Loading the Rviz viewer failed. Falling back on qtcoin')
+                attach_viewer = 'qtcoin'
 
-      if attach_viewer and env.GetViewer() is None:
-	  env.SetViewer(attach_viewer)
-	  if env.GetViewer() is None:
-	      raise Exception('Failed creating viewer of type "{0:s}"'.format(
-		  attach_viewer))
+        if attach_viewer and env.GetViewer() is None:
+            env.SetViewer(attach_viewer)
+            if env.GetViewer() is None:
+                raise Exception('Failed creating viewer of type "{0:s}"'.format(
+                attach_viewer))
 
     #Remove ROS Logging since loading Rviz might have added it
     prpy.logger.remove_ros_logger()
         
     #changing orientation
-    robotLocation = numpy.array([[ -1. ,  0. ,  0. ,   0.],
-                                [ 0. ,  0. ,  1. ,  0.],
-                                [ 0. ,  1. ,  0. ,   0.],
-                                [ 0. ,  0. ,  0. ,   1. ]])
-    robot.SetTransform(robotLocation)
+    with env:
+        robotLocation = numpy.array([[ -1. ,  0. ,  0. ,   0.],
+                                    [ 0. ,  0. ,  1. ,  0.],
+                                    [ 0. ,  1. ,  0. ,   0.],
+                                    [ 0. ,  0. ,  0. ,   1. ]])
+        robot.SetTransform(robotLocation)
 
     return env, robot

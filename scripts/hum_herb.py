@@ -10,18 +10,17 @@ if __name__ == "__main__":
     logger.setLevel(logging.INFO)
     
     sim = True
-    attach_viewer = True
-    env, herb = herbpy.initialize(attach_viewer=attach_viewer, sim=sim)  
-
-    _, human = humanpy.initialize(attach_viewer=attach_viewer, sim=sim, env=env)    
-    humanLocation = numpy.array([[ 0. ,  0. ,  -1. ,   1.9],  #-1.2
-                                [ -1. ,  0. ,  0. ,  0.],   #-0.5
-                                [ 0. ,  1. ,  0. ,   0.85],
-                                [ 0. ,  0. ,  0. ,   1. ]])
-    human.SetTransform(humanLocation)
-    human.right_arm.SetActive()
-
-    with env:             
+    env, herb = herbpy.initialize(attach_viewer=True, sim=sim)  
+     
+    with env:
+        _, human = humanpy.initialize(sim=sim, env=env)   
+        humanLocation = numpy.array([[ 0. ,  0. ,  -1. ,   1.9],  #-1.2
+                                    [ -1. ,  0. ,  0. ,  0.],   #-0.5
+                                    [ 0. ,  1. ,  0. ,   0.85],
+                                    [ 0. ,  0. ,  0. ,   1. ]])
+        human.SetTransform(humanLocation)
+        human.right_arm.SetActive()
+            
         table = env.ReadKinBodyXMLFile('objects/table.kinbody.xml')       
         table_pose = numpy.array([[0., 0.,  1., 1.1],
                                 [1., 0., 0., 0.],
@@ -49,14 +48,13 @@ if __name__ == "__main__":
         fuze.SetTransform(fuze_pose)
         fuze.SetName('fuze')
         env.AddKinBody(fuze)
+        
+        herb.right_arm.SetActive()
+        human.right_arm.SetActive()
    
-    # Grasp the bottle 
-    herb.right_arm.SetActive()
     herb.Grasp(glass)
-    human.right_arm.SetActive()
-    human.right_arm.Grasp(fuze)
-    
+    human.right_arm.Grasp(fuze)    
 
-    raw_input("press enter to quit!")
+    #raw_input("press enter to quit!")
  
         
