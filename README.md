@@ -4,6 +4,12 @@ HumanPy
 HumanPy is a Python library for interacting with an OpenRave Model of a Human through OpenRAVE. HumanPy expands the robot-agnostic helper library [PrPy]
 (https://github.com/personalrobotics/prpy) by wrapping Human-specific functionality. This software was created by the [Personal Robotics Lab] (https://personalrobotics.ri.cmu.edu) at [Carnegie Mellon University] (http://www.cmu.edu). 
 
+## ##
+You will need to append the directory 'humanpy/ordata/dae' to your OPENRAVE_PLUGINS to use it, e.g.
+
+$ export OPENRAVE_PLUGINS="/home/spelle/ros_ws/src/humanpy/ordata/dae:${OPENRAVE_PLUGINS}"
+# $ export OPENRAVE_PLUGINS="/home/spelle/storage/ros_test_ws/src/humanpy/ordata/dae:${OPENRAVE_PLUGINS}"
+
 ## Running HumanPy ##
 You use HumanPy in your script by simply calling the ``initialize`` function:
 

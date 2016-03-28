@@ -28,28 +28,12 @@ def initialize(attach_viewer=False, sim=True, user_id='human', env=None):
     
     prpy.logger.initialize_logging()
     
-    from catkin.find_in_workspaces import find_in_workspaces
-    package_name = 'humanpy'
-    directory = 'ordata/dae'
-    objects_path = find_in_workspaces(
-        search_dirs=['share'],
-        project=package_name,
-        path=directory,
-        first_match_only=True)
-    if len(objects_path) == 0:
-        print('Can\'t find directory %s/%s' % (package_name, directory))
-        sys.exit()
-    else:
-        print objects_path # for me this is '/home/spelle/storage/ros_test_ws/src/humanpy/ordata/dae/man1.dae'
-        objects_path = objects_path[0]
-    
     if not env:
         env = Environment()
 
     #Setup Manipulators
     with env:
-        robot_file = os.path.join(objects_path, 'man1.dae')
-        robot = env.ReadKinBodyXMLFile(robot_file)
+        robot = env.ReadKinBodyXMLFile('robots/man1.dae')
         robot.SetName(user_id)              #needed in order to have different humans in the same env
         env.AddKinBody(robot) 
 
