@@ -39,5 +39,5 @@ The example call the herb initialization function and than load the human robot.
 The example calls herb initialization function and than loads the human. The human is moved accordingly to the data coming from the kinect.
 If herb localization is active (segway simulation is False), set the param seg_sim:=False:
 
-    'roslaunch humanpy humtrackkinect2_herb.launch seg_sim:=False'
+    roslaunch humanpy humtrackkinect2_herb.launch seg_sim:=False
     
