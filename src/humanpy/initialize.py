@@ -2,7 +2,6 @@ PACKAGE = 'humanpy'
 import logging
 import os
 
-from catkin.find_in_workspaces import find_in_workspaces
 from openravepy import Environment, IkParameterizationType, RaveCreateController, RaveCreateModule
 from openravepy.databases.inversekinematics import InverseKinematicsModel
 
