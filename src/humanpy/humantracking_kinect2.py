@@ -20,7 +20,6 @@ class Orhuman(object):
         self.base_frame = base_frame
         self.refsys = kin_frame
         self.env = env
-        self.robot = env.GetRobot('herb')
         _,self.body = humanpy.initialize(sim=True, user_id=id, env=env)
         self.body.Enable(False)
         with env:
