@@ -123,3 +123,4 @@ def initialize(attach_viewer=False, sim=True, user_id='human', env=None):
         robot.SetTransform(robotLocation)
 
     return env, robot
+
