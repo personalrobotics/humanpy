@@ -55,17 +55,17 @@ def initialize(attach_viewer=False, sim=True, user_id='human', env=None):
         args = 'IdealController'         
         affine_dofs=0
         
-        delegate_controller = RaveCreateController(env, args)
-        if delegate_controller is None:
+        delegate_controllerr = RaveCreateController(env, args)
+        if delegate_controllerr is None:
             message = 'Creating controller {0:s} of type {1:s} failed.'.format(robot.right_arm.GetName(), args)
             raise openrave_exception(message)
-        robot.multicontroller.AttachController(delegate_controller, robot.right_arm.GetArmIndices(), affine_dofs)
+        robot.multicontroller.AttachController(delegate_controllerr, robot.right_arm.GetArmIndices(), affine_dofs)
         
-        delegate_controller = RaveCreateController(env, args)
-        if delegate_controller is None:
+        delegate_controllerl = RaveCreateController(env, args)
+        if delegate_controllerl is None:
             message = 'Creating controller {0:s} of type {1:s} failed.'.format(robot.left_arm.GetName(), args)
             raise openrave_exception(message)
-        robot.multicontroller.AttachController(delegate_controller, robot.left_arm.GetArmIndices(), affine_dofs)
+        robot.multicontroller.AttachController(delegate_controllerl, robot.left_arm.GetArmIndices(), affine_dofs)
 
         #Setup IK
         ikmodel_left = InverseKinematicsModel(
