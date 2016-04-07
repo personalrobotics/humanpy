@@ -52,21 +52,20 @@ def initialize(attach_viewer=False, sim=True, user_id='human', env=None):
         bind_subclass(robot.right_arm.hand, HumanHand, manipulator=robot.right_arm, sim=True)
         
         #Setup Controller
-        if sim==True:
-          args = 'IdealController'         
-          affine_dofs=0
-          
-          delegate_controller = RaveCreateController(env, args)
-          if delegate_controller is None:
-              message = 'Creating controller {0:s} of type {1:s} failed.'.format(robot.right_arm.GetName(), args)
-              raise openrave_exception(message)
-          robot.multicontroller.AttachController(delegate_controller, robot.right_arm.GetArmIndices(), affine_dofs)
-          
-          delegate_controller = RaveCreateController(env, args)
-          if delegate_controller is None:
-              message = 'Creating controller {0:s} of type {1:s} failed.'.format(robot.left_arm.GetName(), args)
-              raise openrave_exception(message)
-          robot.multicontroller.AttachController(delegate_controller, robot.left_arm.GetArmIndices(), affine_dofs)
+        args = 'IdealController'         
+        affine_dofs=0
+        
+        delegate_controller = RaveCreateController(env, args)
+        if delegate_controller is None:
+            message = 'Creating controller {0:s} of type {1:s} failed.'.format(robot.right_arm.GetName(), args)
+            raise openrave_exception(message)
+        robot.multicontroller.AttachController(delegate_controller, robot.right_arm.GetArmIndices(), affine_dofs)
+        
+        delegate_controller = RaveCreateController(env, args)
+        if delegate_controller is None:
+            message = 'Creating controller {0:s} of type {1:s} failed.'.format(robot.left_arm.GetName(), args)
+            raise openrave_exception(message)
+        robot.multicontroller.AttachController(delegate_controller, robot.left_arm.GetArmIndices(), affine_dofs)
 
         #Setup IK
         ikmodel_left = InverseKinematicsModel(
