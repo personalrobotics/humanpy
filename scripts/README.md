@@ -16,9 +16,7 @@ As of June 2016, the Kinect on HERB does not use openni2-tracker. Therefore, the
 `humtrackkinect2_herb.launch` lanches the script `humtrackkinect2_herb.py` that contains an example on how to use the data coming from the kinect 2 (through `k2_client` - https://github.com/personalrobotics/k2_client and `k2_client_vis` - https://github.com/personalrobotics/k2_client_vis).
 The example calls herb initialization function and than loads the human. The human is moved accordingly to the data coming from the kinect.
 If herb localization is active (segway simulation is False), set the param seg_sim:=False:
-
-    'roslaunch humanpy humtrackkinect2_herb.launch seg_sim:=False'
-    
+`roslaunch humanpy humtrackkinect2_herb.launch seg_sim:=False`
 The process to launch the script is:
 Physically connect a monitor to herb3, which is a small PC on top of herb0. Login with pr-demo and usual password. The OS of that PC is windows. Click on the kinect shortcut, to start the kinect server. A small icon on the bottom-right-hand side of the screen should appear, showing a small kinect running in green color. 
 Then, switch to your machine.
