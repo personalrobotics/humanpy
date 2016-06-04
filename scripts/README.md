@@ -18,9 +18,12 @@ The example calls herb initialization function and than loads the human. The hum
 If herb localization is active (segway simulation is False), set the param seg_sim:=False:
 `roslaunch humanpy humtrackkinect2_herb.launch seg_sim:=False`
 The process to launch the script is:
-Physically connect a monitor to herb3, which is a small PC on top of herb0. Login with pr-demo and usual password. The OS of that PC is windows. Click on the kinect shortcut, to start the kinect server. A small icon on the bottom-right-hand side of the screen should appear, showing a small kinect running in green color. 
-Then, switch to your machine.
-In your catking woskpace, do `rosmasterherb` then launch the launch file
+
+Physically connect a monitor to herb3, which is a small PC on top of herb0. 
+Login with pr-demo and usual password. The OS of that PC is windows. Click on the kinect shortcut, to start the kinect server. A small icon on the bottom-right-hand side of the screen should appear, showing a small kinect running in green color. 
+
+Switch to your machine. In your catking woskpace, do `rosmasterherb` then launch the launch file
+
 On a new terminal, do `rosmasterherb` and then `rosrun rviz rviz`. In the rviz viewer, do add, by topic, and then `InteractiveMarkers`. HERB should appear. Stand in front of the Kinect with your hands extended to the sides. A human figure should appear in the viewer, following your motions. 
 
 
