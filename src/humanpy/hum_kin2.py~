@@ -1,0 +1,122 @@
+PACKAGE = 'humanpy'
+import tf
+import re
+import time as pythonTime
+import random
+import numpy
+KIN_FRAME = '/head/skel_depth_frame'
+DISAGREE_CHANCE = 0.5
+SAMPLING_PERIOD = 1
+STEPSIZE_THRESHOLD = 0.3
+PROXIMITY_THRESHOLD = 1.4
+BASE_TURN_RATIO = 0.8 #average base turn angle = 0.3
+
+class Orhuman(object):
+
+    def __init__(self, id, env):
+        assert id != ''
+        self.id = id
+        self.enabled = True
+        self.env = env
+        self.robot = env.GetRobot('herb')
+        self.lastPosition = 0
+        self.lastTimeHumanUpdated = 0
+        self.intermediateStepRecorded = False
+        self.intermediateStep = 0
+        self.tf_name = "/skel/"+self.id+"/SpineMid"
+
+    def update(self, tf):
+        time_since_last_update = pythonTime.time() - self.lastTimeHumanUpdated
+        if time_since_last_update > SAMPLING_PERIOD:
+            world_name = KIN_FRAME
+            self.lastTimeHumanUpdated = pythonTime.time()
+            if tf.frameExists(self.tf_name) and tf.frameExists(world_name):
+                time = tf.getLatestCommonTime(self.tf_name, world_name)
+                try:
+                    pos = tf.lookupTransform(world_name, self.tf_name, time)[0]
+                except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+                    return
+                print("z = %.2f" % pos[2])
+		print("id = {}".format(self.id))
+                # if pos[2] < PROXIMITY_THRESHOLD:
+                #     print("id = {}".format(self.id))
+                #     #print("(x = %.2f, z = %.2f)" % (pos[0], pos[2]))
+                #     print("current position = %.2f" % pos[0])
+                #     humanPosDelta = pos[0] - self.lastPosition
+                #     #add sum of last 2 differences since just one snapshot can catch human while he's moving
+                #     #assuming move doesnt last longer than 2*SAMPLING_PERIOD
+                #     if self.intermediateStepRecorded:
+                #         humanPosDelta += self.intermediateStep
+                #         if abs(humanPosDelta) > STEPSIZE_THRESHOLD:
+                #             #self.humanMoved(tf, pos[0],humanPosDelta)
+                #             self.robot.base.Rotate(humanPosDelta/BASE_TURN_RATIO)
+                #             print("human moved by %.2f"%humanPosDelta)
+                #             #after the turn gotta re-measure last position, so update pos
+                #             time = tf.getLatestCommonTime(self.tf_name, world_name)
+                #             pos = tf.lookupTransform(world_name, self.tf_name, time)[0]
+                #         else:
+                #             print("moved only by = %.2f"%abs(humanPosDelta))
+                #         self.intermediateStepRecorded = False
+                #     else:
+                #         self.intermediateStep = humanPosDelta
+                #         self.intermediateStepRecorded = True
+                #         print("intermediate snapshot delta = %.2f" % humanPosDelta)
+                #     self.lastPosition = pos[0]
+                #     print("recording last position = %.2f" % self.lastPosition)
+                #     self.lastTimeHumanUpdated = pythonTime.time()
+                #     print("----------------------")
+                #     return True
+                # print("(id = {}) isn't close enough".format(self.id))
+        return False
+
+    def humanMoved(self, tf, curPos, humanPosDelta):
+        if random.random() < 1 - DISAGREE_CHANCE:
+            self.robot.base.Rotate(humanPosDelta / BASE_TURN_RATIO)
+            print("human moved by %.2f" % humanPosDelta)
+            return
+        self.robot.Say("I disagree")
+        pythonTime.sleep(2)
+        time = tf.getLatestCommonTime(self.tf_name, KIN_FRAME)
+        pos = tf.lookupTransform(KIN_FRAME, self.tf_name, time)[0]
+        # pos0-curpos = -humanPosDelta means human backed up
+        # pos0-curpos = -2humanPosDelta means human is trying the other direction
+        # pos0 = curpos - means human is trying the same direction
+        if abs(pos[0] - curPos + humanPosDelta) < STEPSIZE_THRESHOLD:
+            return
+        elif abs(pos[0] - curPos + 2 * humanPosDelta) < STEPSIZE_THRESHOLD:
+            self.humanMoved(tf, pos[0], -humanPosDelta)
+        elif abs(pos[0] - curPos) < STEPSIZE_THRESHOLD:
+            self.humanMoved(tf, pos[0], humanPosDelta)
+        else:
+            print("HUMAN MOVE NOT RECOGNIZED")
+
+def humanInList(human, ids):
+    for id in ids:
+        if human.id == 'user_' + id:
+            return True
+    return False
+
+
+def addRemoveHumans(transform, humans, env):
+    matcher = re.compile('.*user_(\\d+).*')
+    all_tfs = transform.getFrameStrings()
+    all_human_ids = []
+    for frame_name in all_tfs:
+        match = matcher.match(frame_name)
+        if match is not None:
+            all_human_ids.append(match.groups()[0])
+
+    # removing
+    humans_to_remove = [x for x in humans if not humanInList(x, all_human_ids)]
+    for human in humans_to_remove:
+        humans.remove(human)
+
+    # adding
+    for id in all_human_ids:
+        found = False
+        for human in humans:
+            if human.id == 'user_' + id:
+                found = True
+                break
+        if not found:
+            humans.append(Orhuman('user_' + id, env))
