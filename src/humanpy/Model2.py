@@ -76,8 +76,7 @@ class Data:
         tree = ET.parse(self.momdpOutFolderName + self.policyFileName)
         root = tree.getroot()
         numVectors = len(root.getchildren()[0].getchildren())
-        print numVectors
-        print root.iter('Vector')
+
         counter = 0
         for vector in root.iter('Vector'):
             obsValue = vector.get('obsValue')
@@ -163,6 +162,7 @@ class Data:
 
         self.currState = self.startStateIndx
         self.id = id  # this is a user id
+        print "Model2 - done loading"
 
     def stateUpdateFromHumanAction(self, humanAction, x):
         robotAction = x.getRobotActionFromPolicy(self.currState, self.bel_t)
