@@ -1,19 +1,23 @@
 <launch>
-    <arg name="bagfile" default="False"/>
     <arg name="kin" default="True"/>
+    <arg name="seg_sim" default="True"/>
     
     <param name="/global_user" value="0" type="str"/> 
     
-    <group if="$(arg bagfile)"> 
+    <group if="$(arg kin)">
+        <include file="$(find k2_client)/launch/k2_client.launch"/>        
+        <node name="updatetf_with_kin" pkg="k2_client_vis" type="updatetf.py" respawn="false" output="screen">  
+            <param name="seg_sim" value="$(arg seg_sim)"/>  
+        </node>
+    </group>   
+    <group unless="$(arg kin)"> 
         <param name="use_sim_time" value="true" />  
         <node pkg="rosbag" type="play" name="playert" output="screen" args="--hz=200 -q --duration=35 --delay=1 --clock /homes/spelle/ros_test_ws/bag/stamp/test1.bag"/>
         <node pkg="tf" type="static_transform_publisher" name="map_broadcaster_for_kin" args="-0.9 1.5 1.3 -0.70710678 0.0 0.0 -0.70710678 map /head/skel_depth_frame 100" />
         <node pkg="tf" type="static_transform_publisher" name="map_trial" args="0.0 0.0 0.0 0.0 0.0 0.0 1.0 map /refste 100" />
     </group>
     
-    <group if="$(arg kin)">
-        <include file="$(find k2_client_vis)/launch/k2_client_vis.launch"/> 
-    </group>    
-    
-    <node name="human_env" pkg="humanpy" type="humkin2_herb.py" respawn="false" output="screen"/>
+    <node name="human_env" pkg="humanpy" type="humtrackkinect2_herb.py" respawn="false" output="screen">
+        <param name="seg_sim" value="$(arg seg_sim)"/>  
+    </node>
 </launch>
