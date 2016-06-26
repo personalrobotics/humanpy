@@ -76,7 +76,7 @@ class Data:
         tree = ET.parse(self.momdpOutFolderName + self.policyFileName)
         root = tree.getroot()
         numVectors = len(root.getchildren()[0].getchildren())
-
+        
         counter = 0
         for vector in root.iter('Vector'):
             obsValue = vector.get('obsValue')
