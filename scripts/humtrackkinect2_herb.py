@@ -2,7 +2,7 @@
 import logging 
 import rospy
 import herbpy
-
+import humanpy.humandetection as humdet
 
 if __name__ == "__main__":   
     logger = logging.getLogger('test_skel_herb')
@@ -18,7 +18,7 @@ if __name__ == "__main__":
     else: 
         refsys = '/head/skel_depth_frame'
     
-    herb.DetectHuman(env, orhuman='kin2_or', segway_sim=segway_sim, kin_frame=refsys)
+    humdet.DetectHuman(env, orhuman='kin2_or', segway_sim=segway_sim, kin_frame=refsys)
 
 
 

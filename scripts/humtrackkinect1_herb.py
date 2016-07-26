@@ -2,6 +2,7 @@
 import logging 
 import herbpy
 import numpy
+import humanpy.humandetection as humdet
 
 if __name__ == "__main__":    
     logger = logging.getLogger('test_skel_herb')
@@ -38,6 +39,6 @@ if __name__ == "__main__":
         fuze.SetName('fuze')
         env.AddKinBody(fuze)
 
-    herb.DetectHuman(env, orhuman='kin1_or')
+    humdet.DetectHuman(env, orhuman='kin1_or')
 
 
